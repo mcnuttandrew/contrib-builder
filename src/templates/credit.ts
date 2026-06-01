@@ -1,12 +1,21 @@
-import { CREDIT_CONTRIBUTION_ROLES } from "../creditTaxonomy";
+import {
+  DEFAULT_CREDIT_TAXONOMY_ID,
+  getCreditContributions,
+  getCreditTaxonomy,
+  type CreditTaxonomyId,
+} from "../creditTaxonomy";
 import type { Author } from "../store";
 import { getValidAuthors } from "./utils";
 
-const roleRank = new Map(
-  CREDIT_CONTRIBUTION_ROLES.map((role, idx) => [role.name, idx]),
-);
+function createRoleRank(creditTaxonomyId: string) {
+  return new Map(
+    getCreditTaxonomy(creditTaxonomyId).roles.map((role, idx) => [role.name, idx]),
+  );
+}
 
-function sortByTaxonomyRoleOrder(roles: string[]): string[] {
+function sortByTaxonomyRoleOrder(roles: string[], creditTaxonomyId: string): string[] {
+  const roleRank = createRoleRank(creditTaxonomyId);
+
   return [...new Set(roles)].sort((a, b) => {
     const left = roleRank.get(a) ?? Number.MAX_SAFE_INTEGER;
     const right = roleRank.get(b) ?? Number.MAX_SAFE_INTEGER;
@@ -14,19 +23,34 @@ function sortByTaxonomyRoleOrder(roles: string[]): string[] {
   });
 }
 
-export function generateCreditContributionList(authors: Author[]): string {
+export function generateCreditContributionList(
+  authors: Author[],
+  creditTaxonomyId: CreditTaxonomyId = DEFAULT_CREDIT_TAXONOMY_ID,
+): string {
+  const creditTaxonomy = getCreditTaxonomy(creditTaxonomyId);
   const validAuthors = getValidAuthors(authors);
   const authorsWithContributions = validAuthors.filter(
-    (author) => author.contributions.length > 0,
+    (author) =>
+      getCreditContributions(
+        author.contributions,
+        creditTaxonomy.id as CreditTaxonomyId,
+      ).length > 0,
   );
 
   if (authorsWithContributions.length === 0) {
-    return "No CRediT contributions assigned.";
+    return creditTaxonomy.emptyContributionLabel;
   }
 
   return authorsWithContributions
     .map((author) => {
-      const orderedRoles = sortByTaxonomyRoleOrder(author.contributions);
+      const contributions = getCreditContributions(
+        author.contributions,
+        creditTaxonomy.id as CreditTaxonomyId,
+      );
+      const orderedRoles = sortByTaxonomyRoleOrder(
+        contributions,
+        creditTaxonomy.id,
+      );
       return `${author.name.trim()}: ${orderedRoles.join(", ")}.`;
     })
     .join("\n");

@@ -1,7 +1,10 @@
 <script lang="ts">
   import Popover from "./Popover.svelte";
   import {
-    CREDIT_CONTRIBUTION_ROLES,
+    type CreditTaxonomyId,
+    getCreditTaxonomy,
+    getCreditContributions,
+    setCreditContributions,
     type CreditContributionRoleName,
   } from "./creditTaxonomy";
   import type { Author } from "./store";
@@ -9,20 +12,44 @@
 
   let { author, idx }: { author: Author; idx: number } = $props();
 
+  const activeTaxonomy = $derived(getCreditTaxonomy($store.creditTaxonomyId));
+  const activeContributions = $derived(
+    getCreditContributions(
+      author.contributions,
+      activeTaxonomy.id as CreditTaxonomyId,
+    ),
+  );
+
   const actionButtonStyle =
     "rounded border border-slate-300 px-2 py-1 text-xs text-slate-600 hover:bg-slate-100";
 
   function toggleContribution(roleName: CreditContributionRoleName) {
-    const hasRole = author.contributions.includes(roleName);
+    const hasRole = activeContributions.includes(roleName);
     const next = hasRole
-      ? author.contributions.filter((selected) => selected !== roleName)
-      : [...author.contributions, roleName];
+      ? activeContributions.filter((selected) => selected !== roleName)
+      : [...activeContributions, roleName];
 
-    store.updateAuthorProperty(idx, "contributions", next);
+    store.updateAuthorProperty(
+      idx,
+      "contributions",
+      setCreditContributions(
+        author.contributions,
+        activeTaxonomy.id as CreditTaxonomyId,
+        next,
+      ),
+    );
   }
 
   function clearContributions() {
-    store.updateAuthorProperty(idx, "contributions", []);
+    store.updateAuthorProperty(
+      idx,
+      "contributions",
+      setCreditContributions(
+        author.contributions,
+        activeTaxonomy.id as CreditTaxonomyId,
+        [],
+      ),
+    );
   }
 </script>
 
@@ -30,11 +57,14 @@
   <div
     class="text-[11px] font-semibold uppercase tracking-wide text-slate-500 md:hidden"
   >
-    Contributions (CRediT)
+    Contributions ({activeTaxonomy.label})
   </div>
   <Popover
-    label={author.contributions.join(", ") || "Select contributions"}
-    buttonClass={author.contributions.length > 0
+    label={
+      activeContributions.join(", ") ||
+      `Select ${activeTaxonomy.label} contributions`
+    }
+    buttonClass={activeContributions.length > 0
       ? "w-full rounded-md border border-emerald-300 bg-emerald-50 px-2 py-2 text-left text-sm text-emerald-800 hover:bg-emerald-100 cursor-pointer"
       : "w-full rounded-md border border-dashed border-slate-300 bg-slate-50 px-2 py-2 text-left text-sm text-slate-500 hover:bg-slate-100 cursor-pointer"}
     wrapperClass="w-full"
@@ -43,12 +73,12 @@
     <div
       class="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500"
     >
-      CRediT contributor roles
+      {activeTaxonomy.label} contributor roles
     </div>
 
-    {#if author.contributions.length > 0}
+    {#if activeContributions.length > 0}
       <div class="mb-2 flex flex-wrap gap-1">
-        {#each author.contributions as contribution}
+        {#each activeContributions as contribution}
           <button
             class="rounded-full border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-[11px] text-emerald-700 cursor-pointer"
             onclick={() => toggleContribution(contribution)}
@@ -59,11 +89,11 @@
     {/if}
 
     <div class="max-h-56 space-y-1 overflow-y-auto pr-1">
-      {#each CREDIT_CONTRIBUTION_ROLES as role}
+      {#each activeTaxonomy.roles as role}
         <div class="group relative">
           <button
             class={`w-full rounded border px-2 py-1 text-left text-xs ${
-              author.contributions.includes(role.name)
+              activeContributions.includes(role.name)
                 ? "border-emerald-300 bg-emerald-50 text-emerald-800 cursor-pointer hover:bg-emerald-100"
                 : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 cursor-pointer"
             }`}
@@ -71,7 +101,7 @@
             aria-label={`${role.name}: ${role.description}`}
           >
             <div class="font-semibold">
-              {author.contributions.includes(role.name) ? "[x]" : "[ ]"}
+              {activeContributions.includes(role.name) ? "[x]" : "[ ]"}
               {role.name}
             </div>
             <div class="mt-0.5 text-[11px] leading-relaxed opacity-80">
@@ -93,7 +123,7 @@
       <button
         class={actionButtonStyle}
         onclick={clearContributions}
-        disabled={author.contributions.length === 0}
+        disabled={activeContributions.length === 0}
       >
         Clear
       </button>

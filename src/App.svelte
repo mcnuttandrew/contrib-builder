@@ -1,4 +1,9 @@
 <script lang="ts">
+  import {
+    CREDIT_TAXONOMIES,
+    getCreditTaxonomy,
+    type CreditTaxonomyId,
+  } from "./creditTaxonomy";
   import store from "./store";
   import Author from "./Author.svelte";
   import AuthorshipBlock from "./Authorship.svelte";
@@ -10,6 +15,7 @@
   let template = $state("IEEE" as keyof typeof templates);
   let showWelcomeModal = $state(true);
   let newPaperAuthorNames = $state("");
+  const activeTaxonomy = $derived(getCreditTaxonomy($store.creditTaxonomyId));
 
   const controlButtonBase =
     "inline-flex min-h-11 items-center justify-center rounded-full px-4 py-2 text-sm font-semibold tracking-tight shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 cursor-pointer disabled:pointer-events-none disabled:opacity-50";
@@ -81,15 +87,35 @@
 
 <div class="mx-auto flex w-full max-w-7xl flex-col gap-5 p-4">
   <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-    <div class="flex flex-col gap-3">
-      <div>
+    <div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+      <div class="space-y-1">
         <h1 class="text-2xl font-semibold tracking-tight text-slate-900">
           Contribution Management
         </h1>
         <p class="text-sm text-slate-600">
-          Manage authors, resolve identifiers, and generate contribution text.
+          Manage authors, resolve identifiers, and generate contribution text for
+          {activeTaxonomy.label}.
         </p>
       </div>
+      <label class="flex flex-col gap-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+        Credit taxonomy
+        <select
+          class="min-w-56 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-800 shadow-sm focus:border-slate-400 focus:outline-none"
+          value={$store.creditTaxonomyId}
+          onchange={(e) => {
+            const target = e.currentTarget as HTMLSelectElement | null;
+            if (!target) {
+              return;
+            }
+
+            store.setCreditTaxonomy(target.value as CreditTaxonomyId);
+          }}
+        >
+          {#each CREDIT_TAXONOMIES as taxonomy}
+            <option value={taxonomy.id}>{taxonomy.label}</option>
+          {/each}
+        </select>
+      </label>
     </div>
   </div>
 
@@ -153,7 +179,7 @@
           >
         {/if}
       </div>
-      <div>Contributions (CRediT)</div>
+      <div>Contributions ({activeTaxonomy.label})</div>
     </div>
     {#each $store.authors as author, idx}
       <Author {author} {idx} />

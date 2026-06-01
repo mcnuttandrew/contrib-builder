@@ -1,11 +1,18 @@
 <script lang="ts">
   import templates from "./templates";
   import store from "./store";
+  import { getCreditTaxonomy, type CreditTaxonomyId } from "./creditTaxonomy";
 
   let template = $state("IEEE" as keyof typeof templates);
 
   const templateNames = Object.keys(templates) as Array<keyof typeof templates>;
-  const latexOutput = $derived(templates[template]($store.authors));
+  const activeTaxonomy = $derived(getCreditTaxonomy($store.creditTaxonomyId));
+  const latexOutput = $derived(
+    templates[template](
+      $store.authors,
+      activeTaxonomy.id as CreditTaxonomyId,
+    ),
+  );
 
   type LatexToken = {
     text: string;

@@ -34,12 +34,17 @@ exports[`generateCGFAuthorList > returns anonymous fallback when there are no va
 }"
 `;
 
-exports[`generateCreditContributionList > renders per-author CRediT roles in taxonomy order 1`] = `
+exports[`generateCreditContributionList > renders legacy CRediT roles when that taxonomy is selected 1`] = `
 "Ada Lovelace: Conceptualization, Software, Validation.
 Alan Turing: Methodology, Writing - review and editing."
 `;
 
-exports[`generateCreditContributionList > returns fallback when no valid contributions are set 1`] = `"No CRediT contributions assigned."`;
+exports[`generateCreditContributionList > renders per-author roles in Ground Works taxonomy order 1`] = `
+"Ada Lovelace: Conceptualization, Production - Technical, Validation.
+Alan Turing: Methodology, Writing – review & editing."
+`;
+
+exports[`generateCreditContributionList > returns fallback when no valid contributions are set 1`] = `"No CReDIT-fAIR contributions assigned."`;
 
 exports[`generateIEEEAuthorList > formats name, email and affiliation for valid authors 1`] = `
 "\\author{Ada Lovelace\\thanks{e-mail: ada@example.com}\\\\ %

@@ -1,21 +1,30 @@
 import { writable } from "svelte/store";
 import {
-  CREDIT_CONTRIBUTION_ROLES,
+  DEFAULT_CREDIT_TAXONOMY_ID,
+  getCreditTaxonomy,
+  getCreditTaxonomyRoleNames,
+  LEGACY_CREDIT_TAXONOMY_ID,
+  isKnownCreditTaxonomyId,
+  normalizeCreditContributionRecord,
+  type CreditContributionRecord,
   type CreditContributionRoleName,
+  type CreditTaxonomyId,
 } from "./creditTaxonomy";
 export interface Author {
   name: string;
   email: string;
   affiliation: string | null | string[];
   orcid: string | null | string[];
-  contributions: CreditContributionRoleName[];
+  contributions: CreditContributionRecord;
 }
 
 interface StoreData {
+  creditTaxonomyId: CreditTaxonomyId;
   authors: Author[];
 }
 
 const InitialStore: StoreData = {
+  creditTaxonomyId: DEFAULT_CREDIT_TAXONOMY_ID,
   authors: [],
 };
 
@@ -25,38 +34,120 @@ function serializeStore(store: StoreData) {
   };
 }
 
-const validContributionRoles = new Set(
-  CREDIT_CONTRIBUTION_ROLES.map((role) => role.name),
-);
-
-function normalizeContributions(value: unknown): CreditContributionRoleName[] {
-  if (!Array.isArray(value)) {
+function collectContributionNames(store: any): string[] {
+  if (!Array.isArray(store?.authors)) {
     return [];
   }
 
-  return value
-    .map((entry) => {
-      if (typeof entry === "string") {
-        return entry;
-      }
+  return store.authors.flatMap((author: any) =>
+    Array.isArray(author?.contributions)
+      ? author.contributions.map((entry: unknown) => {
+          if (typeof entry === "string") {
+            return entry;
+          }
 
-      if (
-        entry &&
-        typeof entry === "object" &&
-        "name" in entry &&
-        typeof entry.name === "string"
-      ) {
-        return entry.name;
-      }
+          if (
+            entry &&
+            typeof entry === "object" &&
+            "name" in entry &&
+            typeof entry.name === "string"
+          ) {
+            return entry.name;
+          }
 
-      return "";
-    })
-    .filter((role): role is CreditContributionRoleName =>
-      validContributionRoles.has(role as CreditContributionRoleName),
-    );
+          return "";
+        })
+      : Object.values(author?.contributions ?? {}).flatMap((entries) =>
+          Array.isArray(entries)
+            ? entries.map((entry: unknown) => {
+                if (typeof entry === "string") {
+                  return entry;
+                }
+
+                if (
+                  entry &&
+                  typeof entry === "object" &&
+                  "name" in entry &&
+                  typeof entry.name === "string"
+                ) {
+                  return entry.name;
+                }
+
+                return "";
+              })
+            : [],
+        ),
+  );
+}
+
+function resolveCreditTaxonomyId(store: any): CreditTaxonomyId {
+  const storedTaxonomyId =
+    typeof store?.creditTaxonomyId === "string"
+      ? store.creditTaxonomyId
+      : null;
+
+  if (isKnownCreditTaxonomyId(storedTaxonomyId)) {
+    return storedTaxonomyId;
+  }
+
+  const contributionNames = collectContributionNames(store);
+  const groundworksRoleNames = new Set(
+    getCreditTaxonomyRoleNames(getCreditTaxonomy(DEFAULT_CREDIT_TAXONOMY_ID)),
+  );
+  const legacyRoleNames = new Set(
+    getCreditTaxonomyRoleNames(getCreditTaxonomy(LEGACY_CREDIT_TAXONOMY_ID)),
+  );
+
+  const hasGroundworksOnlyRole = contributionNames.some(
+    (role) => role && !legacyRoleNames.has(role) && groundworksRoleNames.has(role),
+  );
+  const hasLegacyOnlyRole = contributionNames.some(
+    (role) => role && !groundworksRoleNames.has(role) && legacyRoleNames.has(role),
+  );
+
+  if (hasGroundworksOnlyRole && !hasLegacyOnlyRole) {
+    return DEFAULT_CREDIT_TAXONOMY_ID;
+  }
+
+  if (hasLegacyOnlyRole && !hasGroundworksOnlyRole) {
+    return LEGACY_CREDIT_TAXONOMY_ID;
+  }
+
+  return DEFAULT_CREDIT_TAXONOMY_ID;
+}
+
+function normalizeContributions(
+  value: unknown,
+  creditTaxonomyId: CreditTaxonomyId,
+): CreditContributionRecord {
+  if (Array.isArray(value)) {
+    return {
+      [creditTaxonomyId]: value
+        .map((entry) => {
+          if (typeof entry === "string") {
+            return entry;
+          }
+
+          if (
+            entry &&
+            typeof entry === "object" &&
+            "name" in entry &&
+            typeof entry.name === "string"
+          ) {
+            return entry.name;
+          }
+
+          return "";
+        })
+        .filter((role): role is CreditContributionRoleName => role.length > 0),
+    };
+  }
+
+  return normalizeCreditContributionRecord(value, creditTaxonomyId);
 }
 
 function deserializeStore(store: any) {
+  const creditTaxonomyId = resolveCreditTaxonomyId(store);
   const authors = Array.isArray(store?.authors)
     ? store.authors.map((author: Partial<Author>) => ({
         name: author?.name ?? "New Author",
@@ -67,12 +158,16 @@ function deserializeStore(store: any) {
             ? author.affiliation
             : "",
         orcid: author?.orcid ?? null,
-        contributions: normalizeContributions(author?.contributions),
+        contributions: normalizeContributions(
+          author?.contributions,
+          creditTaxonomyId,
+        ),
       }))
     : [];
 
   return {
     ...store,
+    creditTaxonomyId,
     authors,
   };
 }
@@ -139,11 +234,16 @@ function createStore() {
     email: "",
     affiliation: "",
     orcid: null,
-    contributions: [],
+    contributions: {},
   });
 
   return {
     subscribe,
+    setCreditTaxonomy: (creditTaxonomyId: CreditTaxonomyId) =>
+      persistUpdate((currentVal) => ({
+        ...currentVal,
+        creditTaxonomyId,
+      })),
     undo: () =>
       saveUpdate((currentVal) => {
         if (undoStack.length === 0) return currentVal;
@@ -192,7 +292,7 @@ function createStore() {
     updateAuthorProperty: (
       idx: number,
       type: "name" | "email" | "affiliation" | "orcid" | "contributions",
-      value: string | string[] | null,
+      value: string | string[] | null | CreditContributionRecord,
     ) =>
       updateValue<StoreData["authors"]>("authors", (authors) =>
         authors.map((author, i) =>

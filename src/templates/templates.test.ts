@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
 
+import {
+  DEFAULT_CREDIT_TAXONOMY_ID,
+  LEGACY_CREDIT_TAXONOMY_ID,
+  getCreditTaxonomy,
+  setCreditContributions,
+} from "../creditTaxonomy";
 import type { Author } from "../store";
 import { generateACMAuthorList } from "./acm";
 import { generateCGFAuthorList } from "./cgf";
@@ -13,7 +19,7 @@ function makeAuthor(overrides: Partial<Author>): Author {
     email: "",
     affiliation: "",
     orcid: null,
-    contributions: [],
+    contributions: {},
     ...overrides,
   };
 }
@@ -132,24 +138,61 @@ describe("generateCreditContributionList", () => {
   it("returns fallback when no valid contributions are set", () => {
     const output = generateCreditContributionList([
       makeAuthor({ name: "Ada Lovelace" }),
-      makeAuthor({ name: "Alan Turing", contributions: [] }),
+      makeAuthor({
+        name: "Alan Turing",
+        contributions: setCreditContributions({}, DEFAULT_CREDIT_TAXONOMY_ID, []),
+      }),
     ]);
 
-    expect(output).toBe("No CRediT contributions assigned.");
+    expect(output).toBe("No CReDIT-fAIR contributions assigned.");
     expect(output).toMatchSnapshot();
   });
 
-  it("renders per-author CRediT roles in taxonomy order", () => {
+  it("renders per-author roles in Ground Works taxonomy order", () => {
     const output = generateCreditContributionList([
       makeAuthor({
         name: "Ada Lovelace",
-        contributions: ["Software", "Conceptualization", "Validation"],
+        contributions: setCreditContributions(
+          {},
+          DEFAULT_CREDIT_TAXONOMY_ID,
+          ["Production - Technical", "Conceptualization", "Validation"],
+        ),
       }),
       makeAuthor({
         name: "Alan Turing",
-        contributions: ["Methodology", "Writing - review and editing"],
+        contributions: setCreditContributions(
+          {},
+          DEFAULT_CREDIT_TAXONOMY_ID,
+          ["Methodology", "Writing – review & editing"],
+        ),
       }),
-    ]);
+    ], DEFAULT_CREDIT_TAXONOMY_ID);
+
+    expect(output).toBe(
+      "Ada Lovelace: Conceptualization, Production - Technical, Validation.\nAlan Turing: Methodology, Writing – review & editing.",
+    );
+    expect(output).toMatchSnapshot();
+  });
+
+  it("renders legacy CRediT roles when that taxonomy is selected", () => {
+    const output = generateCreditContributionList([
+      makeAuthor({
+        name: "Ada Lovelace",
+        contributions: setCreditContributions(
+          {},
+          LEGACY_CREDIT_TAXONOMY_ID,
+          ["Software", "Conceptualization", "Validation"],
+        ),
+      }),
+      makeAuthor({
+        name: "Alan Turing",
+        contributions: setCreditContributions(
+          {},
+          LEGACY_CREDIT_TAXONOMY_ID,
+          ["Methodology", "Writing - review and editing"],
+        ),
+      }),
+    ], LEGACY_CREDIT_TAXONOMY_ID);
 
     expect(output).toBe(
       "Ada Lovelace: Conceptualization, Software, Validation.\nAlan Turing: Methodology, Writing - review and editing.",
