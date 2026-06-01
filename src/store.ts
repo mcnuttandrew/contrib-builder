@@ -142,13 +142,7 @@ function createStore() {
       ]),
     setAuthorsFromNames: (names: string[]) =>
       updateValue<StoreData["authors"]>("authors", (authors) =>
-        names.map((name, idx) => {
-          const existing = authors[idx] ?? createEmptyAuthor();
-          return {
-            ...existing,
-            name,
-          };
-        }),
+        names.map((name, idx) => ({ ...createEmptyAuthor(), name })),
       ),
     moveAuthor: (fromIdx: number, toIdx: number) =>
       updateValue<StoreData["authors"]>("authors", (authors) => {

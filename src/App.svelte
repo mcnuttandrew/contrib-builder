@@ -2,36 +2,11 @@
   import store from "./store";
   import Author from "./Author.svelte";
   import { getAuthorInfoFromORCID, getORCID } from "./api";
+  import { parseAuthorNames } from "./utils/authorNames";
   import templates from "./templates";
 
-  let template = "ieee" as keyof typeof templates;
+  let template = "IEEE" as keyof typeof templates;
   let bulkAuthorNames = "";
-
-  function parseAuthorNames(value: string): string[] {
-    const cleanedLines = value
-      .split(/\r?\n/)
-      .map((line) =>
-        line
-          .trim()
-          .replace(/^[-*]\s+/, "")
-          .replace(/^\d+[.)-]?\s+/, ""),
-      )
-      .filter(Boolean);
-
-    if (cleanedLines.length === 0) {
-      return [];
-    }
-
-    const splitPattern = /\s*(?:[,;|]|\band\b)\s*/i;
-    const names =
-      cleanedLines.length === 1
-        ? cleanedLines[0].split(splitPattern)
-        : cleanedLines.flatMap((line) =>
-            /[;|]|\band\b/i.test(line) ? line.split(splitPattern) : [line],
-          );
-
-    return names.map((name) => name.trim()).filter(Boolean);
-  }
 
   function applyAuthorDump() {
     const names = parseAuthorNames(bulkAuthorNames);
@@ -43,28 +18,35 @@
   }
 </script>
 
-<div class="w-full bg-black text-white p-4">
-  <h1 class="text-2xl font-bold">Contribution Management</h1>
-</div>
-<div class="flex flex-col gap-4 p-4">
-  <div class="flex flex-col gap-2 border rounded p-3">
-    <label class="text-sm font-semibold" for="bulk-author-names">
+<div class="mx-auto flex w-full max-w-7xl flex-col gap-5 p-4">
+  <div
+    class="rounded-xl border border-slate-200 bg-slate-900 px-4 py-3 text-white shadow-sm"
+  >
+    <h1 class="text-2xl font-semibold tracking-tight">
+      Contribution Management
+    </h1>
+  </div>
+
+  <div
+    class="flex flex-col gap-2 rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+  >
+    <label class="text-sm font-semibold text-slate-700" for="bulk-author-names">
       Paste Author Names
     </label>
     <textarea
       id="bulk-author-names"
-      class="border p-2 rounded"
+      class="min-h-28 rounded-md border border-slate-300 bg-slate-50 p-3 text-slate-800"
       rows="4"
       placeholder="Paste names separated by lines, commas, semicolons, or 'and'"
       bind:value={bulkAuthorNames}
     ></textarea>
     <div class="flex gap-2">
       <button
-        class="bg-blue-500 text-white p-2 rounded"
+        class="rounded-md bg-blue-600 px-3 py-2 text-white"
         on:click={applyAuthorDump}>Apply Names</button
       >
       <button
-        class="bg-gray-500 text-white p-2 rounded"
+        class="rounded-md bg-slate-200 px-3 py-2 text-slate-800"
         on:click={() => {
           bulkAuthorNames = "";
         }}>Clear</button
@@ -72,17 +54,28 @@
     </div>
   </div>
 
-  {#each $store.authors as author, idx}
-    <Author {author} {idx} />
-  {/each}
-  <div>
+  <div class="rounded-xl border border-slate-200 bg-white shadow-sm">
+    <div
+      class="hidden items-center gap-3 border-b border-slate-200 bg-slate-100 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600 md:grid author-table-cols"
+    >
+      <div>Name</div>
+      <div>ORCID</div>
+      <div>Email</div>
+      <div>Affiliation</div>
+    </div>
+    {#each $store.authors as author, idx}
+      <Author {author} {idx} />
+    {/each}
+  </div>
+
+  <div class="flex flex-wrap gap-2">
     <button
-      class="bg-blue-500 text-white p-2 rounded"
+      class="rounded-md bg-blue-600 px-3 py-2 text-white"
       on:click={() => store.addAuthor()}>Add Author</button
     >
 
     <button
-      class="bg-blue-500 text-white p-2 rounded"
+      class="rounded-md bg-sky-600 px-3 py-2 text-white"
       on:click={() => {
         $store.authors.forEach((author, idx) => {
           getORCID(author.name).then((orcid) => {
@@ -95,7 +88,7 @@
     >
 
     <button
-      class="bg-indigo-600 text-white p-2 rounded"
+      class="rounded-md bg-indigo-600 px-3 py-2 text-white"
       on:click={() => {
         $store.authors.forEach((author, idx) => {
           if (!author.orcid || Array.isArray(author.orcid)) {
@@ -124,18 +117,24 @@
     >
   </div>
 
-  <div class="flex flex-col gap-2">
+  <div
+    class="flex flex-col gap-2 rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+  >
     <div class="flex items-center gap-2">
-      <h2 class="text-lg font-semibold">Authorship Block</h2>
-      <label class="text-sm" for="template">Template</label>
-      <select id="template" class="border p-1 rounded" bind:value={template}>
-        <option value="ieee">IEEE</option>
-        <option value="acm">ACM</option>
-        <option value="cgf">CGF</option>
+      <h2 class="text-lg font-semibold text-slate-900">Authorship Block</h2>
+      <label class="text-sm text-slate-600" for="template">Template</label>
+      <select
+        id="template"
+        class="rounded-md border border-slate-300 bg-slate-50 px-2 py-1"
+        bind:value={template}
+      >
+        {#each Object.keys(templates) as t}
+          <option value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
+        {/each}
       </select>
     </div>
     <textarea
-      class="authorship-output border p-2 rounded font-mono"
+      class="authorship-output rounded-md border border-slate-300 bg-slate-50 p-3 font-mono text-sm"
       readonly
       value={templates[template]($store.authors)}
     ></textarea>
@@ -143,11 +142,17 @@
 </div>
 
 <style>
+  .author-table-cols {
+    grid-template-columns:
+      minmax(12rem, 1.25fr) minmax(11rem, 1fr) minmax(11rem, 1fr)
+      minmax(14rem, 1.4fr) auto;
+  }
+
   .authorship-output {
-    field-sizing: content;
-    resize: none;
-    overflow: hidden;
+    resize: vertical;
+    overflow: auto;
     min-height: 11rem;
+    max-height: 65vh;
     width: 100%;
   }
 </style>

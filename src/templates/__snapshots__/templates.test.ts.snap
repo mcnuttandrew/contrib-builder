@@ -1,0 +1,46 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`generateACMAuthorList > includes orcid, affiliation institutions, and email 1`] = `
+"\\author{Grace Hopper}
+\\orcid{0000-0001-2345-6789}
+\\affiliation{%
+  \\institution{US Navy}
+  \\institution{Harvard University}
+}
+\\email{grace@example.com}"
+`;
+
+exports[`generateACMAuthorList > returns anonymous fallback when there are no valid authors 1`] = `"\\author{Anonymous}"`;
+
+exports[`generateCGFAuthorList > builds short list and affiliation mapping across authors 1`] = `
+"\\author[Lovelace, Turing, Hopper, \\etal{}]
+{\\parbox{\\textwidth}{\\centering
+    A. Lovelace$^{1}$\\orcid{0000-0001-1111-1111}, A. Turing$^{2}$, G. Hopper$^{1}$, and B. Liskov$^{3}$
+}
+        \\\\ 
+{\\parbox{\\textwidth}{\\centering $^1$University A\\\\
+         $^2$University B\\\\
+         $^3$University C
+       }
+}
+}"
+`;
+
+exports[`generateCGFAuthorList > returns anonymous fallback when there are no valid authors 1`] = `
+"\\author[Anon]
+{
+  anon \\\\ 
+  {}
+}"
+`;
+
+exports[`generateIEEEAuthorList > formats name, email and affiliation for valid authors 1`] = `
+"\\author{Ada Lovelace\\thanks{e-mail: ada@example.com}\\\\ %
+     \\scriptsize University of Example %}"
+`;
+
+exports[`generateIEEEAuthorList > returns anonymous fallback when there are no valid authors 1`] = `"\\author{Anonymous}"`;
+
+exports[`generatePlainTextAuthorList > returns a comma-separated list of author names 1`] = `"Ada Lovelace, Alan Turing, Grace Hopper"`;
+
+exports[`generatePlainTextAuthorList > returns anonymous fallback when there are no valid authors 1`] = `"Anonymous"`;
