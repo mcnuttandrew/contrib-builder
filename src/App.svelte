@@ -17,6 +17,9 @@
   const controlButtonAccent = `${controlButtonBase} bg-white text-slate-800 ring-1 ring-inset ring-slate-300 hover:bg-slate-50`;
   const controlButtonIndigo = `${controlButtonBase} bg-white text-slate-800 ring-1 ring-inset ring-slate-300 hover:bg-slate-50`;
   const controlButtonSubtle = `${controlButtonBase} bg-slate-100 text-slate-700 ring-1 ring-inset ring-slate-200 hover:bg-slate-200`;
+  const headerActionButtonBase =
+    "inline-flex min-h-0 items-center justify-center rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-[11px] font-medium normal-case tracking-normal text-slate-700 shadow-sm transition-colors hover:border-slate-400 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 cursor-pointer disabled:pointer-events-none disabled:opacity-50";
+  const headerActionButtonMuted = `${headerActionButtonBase} bg-slate-200/70 text-slate-700 border-slate-200 hover:bg-slate-200 hover:border-slate-300`;
 
   function applyAuthorDump(names: string[]) {
     store.setAuthorsFromNames(names);
@@ -87,22 +90,25 @@
           Manage authors, resolve identifiers, and generate contribution text.
         </p>
       </div>
+    </div>
+  </div>
 
-      <div
-        class="flex flex-nowrap gap-2 overflow-x-auto rounded-2xl bg-slate-50 p-2 ring-1 ring-inset ring-slate-200"
-      >
-        <PasteAuthorNames
-          buttonClass={controlButtonPrimary}
-          onApply={applyAuthorDump}
-        />
+  <div class="rounded-xl border border-slate-200 bg-white shadow-sm">
+    <div
+      class="hidden items-center gap-3 border-b border-slate-200 bg-slate-100 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600 md:grid author-table-cols"
+    >
+      <div class="flex min-w-0 items-center justify-between gap-2">
+        <div class="truncate">Name</div>
 
         <button
-          class={`${controlButtonSubtle} shrink-0`}
+          class={`${headerActionButtonMuted} shrink-0`}
           onclick={() => store.addAuthor()}>Add Author</button
         >
-
+      </div>
+      <div class="flex min-w-0 items-center justify-between gap-2">
+        <div class="truncate">ORCID</div>
         <button
-          class={`${controlButtonAccent} shrink-0`}
+          class={`${headerActionButtonBase} shrink-0`}
           onclick={() => {
             $store.authors.forEach((author, idx) => {
               getORCID(author.name).then((orcid) => {
@@ -113,46 +119,40 @@
             });
           }}>Get ORCIDs</button
         >
-
-        <button
-          class={`${controlButtonIndigo} shrink-0`}
-          onclick={() => {
-            $store.authors.forEach((author, idx) => {
-              if (!author.orcid || Array.isArray(author.orcid)) {
-                return;
-              }
-              getAuthorInfoFromORCID(author.orcid).then((details) => {
-                if (!details) {
+      </div>
+      <div class="flex min-w-0 items-center justify-between gap-2">
+        <div class="truncate">Affiliation</div>
+        {#if $store.authors.some((author) => typeof author.orcid === "string")}
+          <button
+            class={`${headerActionButtonBase} shrink-0`}
+            onclick={() => {
+              $store.authors.forEach((author, idx) => {
+                if (!author.orcid || Array.isArray(author.orcid)) {
                   return;
                 }
-                if (details.name) {
-                  store.updateAuthorProperty(idx, "name", details.name);
-                }
-                if (details.email) {
-                  store.updateAuthorProperty(idx, "email", details.email);
-                }
-                if (details.affiliation) {
-                  store.updateAuthorProperty(
-                    idx,
-                    "affiliation",
-                    details.affiliation,
-                  );
-                }
+                getAuthorInfoFromORCID(author.orcid).then((details) => {
+                  if (!details) {
+                    return;
+                  }
+                  if (details.name) {
+                    store.updateAuthorProperty(idx, "name", details.name);
+                  }
+                  if (details.email) {
+                    store.updateAuthorProperty(idx, "email", details.email);
+                  }
+                  if (details.affiliation) {
+                    store.updateAuthorProperty(
+                      idx,
+                      "affiliation",
+                      details.affiliation,
+                    );
+                  }
+                });
               });
-            });
-          }}>Fill From ORCIDs</button
-        >
+            }}>Fill From ORCIDs</button
+          >
+        {/if}
       </div>
-    </div>
-  </div>
-
-  <div class="rounded-xl border border-slate-200 bg-white shadow-sm">
-    <div
-      class="hidden items-center gap-3 border-b border-slate-200 bg-slate-100 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600 md:grid author-table-cols"
-    >
-      <div>Name</div>
-      <div>ORCID</div>
-      <div>Affiliation</div>
       <div>Contributions (CRediT)</div>
     </div>
     {#each $store.authors as author, idx}
