@@ -5,11 +5,13 @@
     label,
     buttonClass = "",
     panelClass = "",
+    wrapperClass = "",
     placement = "bottom-start",
   }: {
     label: string;
     buttonClass?: string;
     panelClass?: string;
+    wrapperClass?: string;
     placement?: "bottom-start" | "bottom-end";
   } = $props();
 
@@ -97,7 +99,10 @@
   });
 </script>
 
-<div class="relative w-full" bind:this={root}>
+<div
+  class={`relative inline-block shrink-0 align-top ${wrapperClass}`}
+  bind:this={root}
+>
   <button
     type="button"
     class={buttonClass}

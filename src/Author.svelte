@@ -132,6 +132,7 @@
       <Popover
         label={`${author.orcid.length} ORCID options`}
         buttonClass={multiOptionCellStyle}
+        wrapperClass="w-full"
         let:close
       >
         <div
@@ -218,6 +219,7 @@
       <Popover
         label={`${author.affiliation.length} affiliation options`}
         buttonClass={multiOptionCellStyle}
+        wrapperClass="w-full"
         let:close
       >
         <div
