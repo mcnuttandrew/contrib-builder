@@ -1,8 +1,8 @@
 <script lang="ts">
   import store from "./store";
   import Author from "./Author.svelte";
+  import AuthorshipBlock from "./Authorship.svelte";
   import { getAuthorInfoFromORCID, getORCID } from "./api";
-  import PasteAuthorNames from "./PasteAuthorNames.svelte";
   import Modal from "./Modal.svelte";
   import templates from "./templates";
   import { parseAuthorNames } from "./utils/authorNames";
@@ -160,42 +160,13 @@
     {/each}
   </div>
 
-  <div
-    class="flex flex-col gap-2 rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
-  >
-    <div class="flex items-center gap-2">
-      <h2 class="text-lg font-semibold text-slate-900">Authorship Block</h2>
-      <label class="text-sm text-slate-600" for="template">Template</label>
-      <select
-        id="template"
-        class="rounded-md border border-slate-300 bg-slate-50 px-2 py-1"
-        bind:value={template}
-      >
-        {#each Object.keys(templates) as t}
-          <option value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
-        {/each}
-      </select>
-    </div>
-    <textarea
-      class="authorship-output rounded-md border border-slate-300 bg-slate-50 p-3 font-mono text-sm"
-      readonly
-      value={templates[template]($store.authors)}
-    ></textarea>
-  </div>
+  <AuthorshipBlock />
 </div>
 
 <style>
   .author-table-cols {
     grid-template-columns:
       minmax(12rem, 1.25fr) minmax(11rem, 1fr) minmax(11rem, 1fr)
-      minmax(14rem, 1.4fr) minmax(14rem, 1.4fr) auto;
-  }
-
-  .authorship-output {
-    resize: vertical;
-    overflow: auto;
-    min-height: 11rem;
-    max-height: 65vh;
-    width: 100%;
+      minmax(18rem, 2fr);
   }
 </style>

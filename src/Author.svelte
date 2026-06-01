@@ -36,7 +36,7 @@
 </script>
 
 <div
-  class="grid gap-2 border-b border-slate-200 p-3 last:border-b-0 md:grid-cols-[minmax(12rem,1.25fr)_minmax(11rem,1fr)_minmax(11rem,1fr)_minmax(14rem,1.4fr)_minmax(14rem,1.4fr)_auto] md:items-start md:gap-3"
+  class="grid gap-2 border-b border-slate-200 p-3 last:border-b-0 md:grid-cols-[minmax(12rem,1.25fr)_minmax(11rem,1fr)_minmax(11rem,1fr)_minmax(18rem,2fr)] md:items-start md:gap-3"
 >
   <div class="flex min-w-0 flex-col gap-1">
     <div
