@@ -99,6 +99,15 @@ function createStore() {
           [field]: updateFunc(oldStore[field as keyof StoreData] as any),
         }) as StoreData,
     );
+
+  const createEmptyAuthor = (): Author => ({
+    name: "New Author",
+    email: "",
+    affiliation: "",
+    orcid: null,
+    contributions: [],
+  });
+
   return {
     subscribe,
     undo: () =>
@@ -129,14 +138,18 @@ function createStore() {
     addAuthor: () =>
       updateValue<StoreData["authors"]>("authors", (authors) => [
         ...authors,
-        {
-          name: "New Author",
-          email: "",
-          affiliation: "",
-          orcid: null,
-          contributions: [],
-        },
+        createEmptyAuthor(),
       ]),
+    setAuthorsFromNames: (names: string[]) =>
+      updateValue<StoreData["authors"]>("authors", (authors) =>
+        names.map((name, idx) => {
+          const existing = authors[idx] ?? createEmptyAuthor();
+          return {
+            ...existing,
+            name,
+          };
+        }),
+      ),
     moveAuthor: (fromIdx: number, toIdx: number) =>
       updateValue<StoreData["authors"]>("authors", (authors) => {
         const newAuthors = [...authors];

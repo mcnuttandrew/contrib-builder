@@ -5,12 +5,73 @@
   import templates from "./templates";
 
   let template = "ieee" as keyof typeof templates;
+  let bulkAuthorNames = "";
+
+  function parseAuthorNames(value: string): string[] {
+    const cleanedLines = value
+      .split(/\r?\n/)
+      .map((line) =>
+        line
+          .trim()
+          .replace(/^[-*]\s+/, "")
+          .replace(/^\d+[.)-]?\s+/, ""),
+      )
+      .filter(Boolean);
+
+    if (cleanedLines.length === 0) {
+      return [];
+    }
+
+    const splitPattern = /\s*(?:[,;|]|\band\b)\s*/i;
+    const names =
+      cleanedLines.length === 1
+        ? cleanedLines[0].split(splitPattern)
+        : cleanedLines.flatMap((line) =>
+            /[;|]|\band\b/i.test(line) ? line.split(splitPattern) : [line],
+          );
+
+    return names.map((name) => name.trim()).filter(Boolean);
+  }
+
+  function applyAuthorDump() {
+    const names = parseAuthorNames(bulkAuthorNames);
+    if (names.length === 0) {
+      return;
+    }
+
+    store.setAuthorsFromNames(names);
+  }
 </script>
 
 <div class="w-full bg-black text-white p-4">
   <h1 class="text-2xl font-bold">Contribution Management</h1>
 </div>
 <div class="flex flex-col gap-4 p-4">
+  <div class="flex flex-col gap-2 border rounded p-3">
+    <label class="text-sm font-semibold" for="bulk-author-names">
+      Paste Author Names
+    </label>
+    <textarea
+      id="bulk-author-names"
+      class="border p-2 rounded"
+      rows="4"
+      placeholder="Paste names separated by lines, commas, semicolons, or 'and'"
+      bind:value={bulkAuthorNames}
+    ></textarea>
+    <div class="flex gap-2">
+      <button
+        class="bg-blue-500 text-white p-2 rounded"
+        on:click={applyAuthorDump}>Apply Names</button
+      >
+      <button
+        class="bg-gray-500 text-white p-2 rounded"
+        on:click={() => {
+          bulkAuthorNames = "";
+        }}>Clear</button
+      >
+    </div>
+  </div>
+
   {#each $store.authors as author, idx}
     <Author {author} {idx} />
   {/each}
