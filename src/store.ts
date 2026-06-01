@@ -1,7 +1,12 @@
 import { writable } from "svelte/store";
+export interface Author {
+  name: string;
+  orcid: string | null | string[];
+  contributions: string[];
+}
 
 interface StoreData {
-  authors: { name: string; orcid: string | null; contributions: string[] }[];
+  authors: Author[];
 }
 
 const InitialStore: StoreData = {
@@ -67,6 +72,14 @@ function createStore() {
       return newVal;
     });
 
+  const updateValue = <A>(field: string, updateFunc: (old: A) => A) =>
+    persistUpdate(
+      (oldStore) =>
+        ({
+          ...oldStore,
+          [field]: updateFunc(oldStore[field as keyof StoreData] as any),
+        }) as StoreData,
+    );
   return {
     subscribe,
     undo: () =>
@@ -95,13 +108,31 @@ function createStore() {
       undoStack.pop();
     },
     addAuthor: () =>
-      persistUpdate((currentVal) => ({
-        ...currentVal,
-        authors: [
-          ...currentVal.authors,
-          { name: "New Author", orcid: null, contributions: [] },
-        ],
-      })),
+      updateValue<StoreData["authors"]>("authors", (authors) => [
+        ...authors,
+        { name: "New Author", orcid: null, contributions: [] },
+      ]),
+    moveAuthor: (fromIdx: number, toIdx: number) =>
+      updateValue<StoreData["authors"]>("authors", (authors) => {
+        const newAuthors = [...authors];
+        const [movedAuthor] = newAuthors.splice(fromIdx, 1);
+        newAuthors.splice(toIdx, 0, movedAuthor);
+        return newAuthors;
+      }),
+    removeAuthor: (idx: number) =>
+      updateValue<StoreData["authors"]>("authors", (authors) =>
+        authors.filter((_, i) => i !== idx),
+      ),
+    updateAuthorProperty: (
+      idx: number,
+      type: "name" | "orcid",
+      value: string | string[] | null,
+    ) =>
+      updateValue<StoreData["authors"]>("authors", (authors) =>
+        authors.map((author, i) =>
+          i === idx ? { ...author, [type]: value } : author,
+        ),
+      ),
   };
 }
 
