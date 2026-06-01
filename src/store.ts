@@ -1,6 +1,8 @@
 import { writable } from "svelte/store";
 export interface Author {
   name: string;
+  email: string;
+  affiliation: string | null | string[];
   orcid: string | null | string[];
   contributions: string[];
 }
@@ -19,8 +21,25 @@ function serializeStore(store: StoreData) {
   };
 }
 function deserializeStore(store: any) {
+  const authors = Array.isArray(store?.authors)
+    ? store.authors.map((author: Partial<Author>) => ({
+        name: author?.name ?? "New Author",
+        email: author?.email ?? "",
+        affiliation:
+          typeof author?.affiliation === "string" ||
+          Array.isArray(author?.affiliation)
+            ? author.affiliation
+            : "",
+        orcid: author?.orcid ?? null,
+        contributions: Array.isArray(author?.contributions)
+          ? author.contributions
+          : [],
+      }))
+    : [];
+
   return {
     ...store,
+    authors,
   };
 }
 
@@ -110,7 +129,13 @@ function createStore() {
     addAuthor: () =>
       updateValue<StoreData["authors"]>("authors", (authors) => [
         ...authors,
-        { name: "New Author", orcid: null, contributions: [] },
+        {
+          name: "New Author",
+          email: "",
+          affiliation: "",
+          orcid: null,
+          contributions: [],
+        },
       ]),
     moveAuthor: (fromIdx: number, toIdx: number) =>
       updateValue<StoreData["authors"]>("authors", (authors) => {
@@ -125,7 +150,7 @@ function createStore() {
       ),
     updateAuthorProperty: (
       idx: number,
-      type: "name" | "orcid",
+      type: "name" | "email" | "affiliation" | "orcid",
       value: string | string[] | null,
     ) =>
       updateValue<StoreData["authors"]>("authors", (authors) =>

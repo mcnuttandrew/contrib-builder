@@ -9,6 +9,7 @@
   <input
     value={author.name}
     class="border p-2"
+    placeholder="Author name"
     onchange={(e) => {
       // @ts-ignore
       const value = e.target?.value;
@@ -18,6 +19,7 @@
       store.updateAuthorProperty(idx, "name", value);
     }}
   />
+
   {#if author.orcid && typeof author.orcid === "string"}
     <a
       href={"https://orcid.org/" + author.orcid}
@@ -65,6 +67,63 @@
       {/if}
     </div>
   {/if}
+  {#if author.affiliation && Array.isArray(author.affiliation)}
+    <div class={"flex flex-col"}>
+      Affiliations:
+      {#each author.affiliation as affiliation, adx}
+        <div class={"flex items-center justify-between"}>
+          <div class={`${buttonStyle} max-w-md truncate`} title={affiliation}>
+            {affiliation}
+          </div>
+          <button
+            class={buttonStyle}
+            onclick={() => {
+              store.updateAuthorProperty(
+                idx,
+                "affiliation",
+                (author.affiliation as string[]).filter(
+                  (_, jdx) => jdx !== adx,
+                ),
+              );
+            }}
+          >
+            ❌
+          </button>
+          <button
+            class={buttonStyle}
+            onclick={() =>
+              store.updateAuthorProperty(idx, "affiliation", affiliation)}
+          >
+            ✔️
+          </button>
+        </div>
+      {/each}
+      {#if author.affiliation.length >= 2}
+        <div class="text-sm text-gray-500">
+          Multiple affiliations found. Please select the correct one
+        </div>
+      {/if}
+    </div>
+  {/if}
+  <input
+    value={author.email}
+    class="border p-2"
+    placeholder="email@example.com"
+    onchange={(e) => {
+      // @ts-ignore
+      const value = e.target?.value;
+      store.updateAuthorProperty(idx, "email", value?.trim() ?? "");
+    }}
+  />
+  <input
+    value={typeof author.affiliation === "string" ? author.affiliation : ""}
+    class="border p-2 flex-1"
+    onchange={(e) => {
+      // @ts-ignore
+      const value = e.target?.value;
+      store.updateAuthorProperty(idx, "affiliation", value ?? "");
+    }}
+  />
   <div>
     <button class={buttonStyle} onclick={() => store.moveAuthor(idx, idx - 1)}>
       ↑
