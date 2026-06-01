@@ -1,13 +1,61 @@
 <script lang="ts">
   import templates from "./templates";
   import store from "./store";
+
   let template = $state("IEEE" as keyof typeof templates);
 
   const templateNames = Object.keys(templates) as Array<keyof typeof templates>;
+  const latexOutput = $derived(templates[template]($store.authors));
+
+  type LatexToken = {
+    text: string;
+    className: string;
+  };
+
+  function tokenizeLatex(value: string): LatexToken[] {
+    const tokens: LatexToken[] = [];
+    const matcher = /(%[^\n]*|\\[a-zA-Z@]+|\\.|[{}$&#_^])/g;
+    let lastIndex = 0;
+
+    for (const match of value.matchAll(matcher)) {
+      const index = match.index ?? 0;
+
+      if (index > lastIndex) {
+        tokens.push({
+          text: value.slice(lastIndex, index),
+          className: "latex-plain",
+        });
+      }
+
+      const text = match[0];
+      let className = "latex-plain";
+
+      if (text.startsWith("%")) {
+        className = "latex-comment";
+      } else if (text.startsWith("\\")) {
+        className = "latex-command";
+      } else if (text === "{" || text === "}") {
+        className = "latex-brace";
+      } else if (text === "$") {
+        className = "latex-math";
+      } else {
+        className = "latex-special";
+      }
+
+      tokens.push({ text, className });
+      lastIndex = index + text.length;
+    }
+
+    if (lastIndex < value.length) {
+      tokens.push({ text: value.slice(lastIndex), className: "latex-plain" });
+    }
+
+    return tokens;
+  }
 </script>
 
 <div
-  class="flex flex-col gap-2 rounded-xl border border-slate-200 bg-white p-4 shadow-sm h-full"
+  class="flex h-full flex-col gap-2 rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
 >
   <div class="flex flex-col gap-3">
     <div
@@ -34,19 +82,74 @@
       {/each}
     </div>
   </div>
-  <textarea
-    class="authorship-output rounded-md border border-slate-300 bg-slate-50 p-3 font-mono text-sm"
-    readonly
-    value={templates[template]($store.authors)}
-  ></textarea>
+
+  <div class="authorship-output-shell">
+    <pre
+      aria-label="Authorship LaTeX output"
+      class="authorship-highlight">{#each tokenizeLatex(latexOutput) as token}<span
+          class={token.className}>{token.text}</span
+        >{/each}</pre>
+  </div>
 </div>
 
 <style>
-  .authorship-output {
-    resize: vertical;
-    overflow: auto;
-    min-height: 11rem;
-    max-height: 65vh;
+  .authorship-output-shell {
+    overflow: visible;
     width: 100%;
+    border-radius: 0.375rem;
+    border: 1px solid rgb(203 213 225);
+    background: rgb(248 250 252);
+  }
+
+  .authorship-highlight {
+    box-sizing: border-box;
+    margin: 0;
+    width: 100%;
+    padding: 0.75rem;
+    font-family:
+      ui-monospace,
+      SFMono-Regular,
+      SF Mono,
+      Menlo,
+      Monaco,
+      Consolas,
+      Liberation Mono,
+      monospace;
+    font-size: 0.875rem;
+    line-height: 1.5rem;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .authorship-highlight {
+    display: block;
+    user-select: text;
+  }
+
+  .latex-plain {
+    color: rgb(15 23 42);
+  }
+
+  .latex-command {
+    color: rgb(2 132 199);
+    font-weight: 600;
+  }
+
+  .latex-comment {
+    color: rgb(22 163 74);
+    font-style: italic;
+  }
+
+  .latex-brace {
+    color: rgb(100 116 139);
+  }
+
+  .latex-math {
+    color: rgb(180 83 9);
+    font-weight: 600;
+  }
+
+  .latex-special {
+    color: rgb(124 58 237);
   }
 </style>
