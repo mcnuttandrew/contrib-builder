@@ -95,8 +95,8 @@
     >
       <div>Name</div>
       <div>ORCID</div>
-      <div>Email</div>
       <div>Affiliation</div>
+      <div>Contributions (CRediT)</div>
     </div>
     {#each $store.authors as author, idx}
       <Author {author} {idx} />
@@ -131,7 +131,7 @@
   .author-table-cols {
     grid-template-columns:
       minmax(12rem, 1.25fr) minmax(11rem, 1fr) minmax(11rem, 1fr)
-      minmax(14rem, 1.4fr) auto;
+      minmax(14rem, 1.4fr) minmax(14rem, 1.4fr) auto;
   }
 
   .authorship-output {

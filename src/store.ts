@@ -1,10 +1,14 @@
 import { writable } from "svelte/store";
+import {
+  CREDIT_CONTRIBUTION_ROLES,
+  type CreditContributionRoleName,
+} from "./creditTaxonomy";
 export interface Author {
   name: string;
   email: string;
   affiliation: string | null | string[];
   orcid: string | null | string[];
-  contributions: string[];
+  contributions: CreditContributionRoleName[];
 }
 
 interface StoreData {
@@ -20,6 +24,38 @@ function serializeStore(store: StoreData) {
     ...store,
   };
 }
+
+const validContributionRoles = new Set(
+  CREDIT_CONTRIBUTION_ROLES.map((role) => role.name),
+);
+
+function normalizeContributions(value: unknown): CreditContributionRoleName[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((entry) => {
+      if (typeof entry === "string") {
+        return entry;
+      }
+
+      if (
+        entry &&
+        typeof entry === "object" &&
+        "name" in entry &&
+        typeof entry.name === "string"
+      ) {
+        return entry.name;
+      }
+
+      return "";
+    })
+    .filter((role): role is CreditContributionRoleName =>
+      validContributionRoles.has(role as CreditContributionRoleName),
+    );
+}
+
 function deserializeStore(store: any) {
   const authors = Array.isArray(store?.authors)
     ? store.authors.map((author: Partial<Author>) => ({
@@ -31,9 +67,7 @@ function deserializeStore(store: any) {
             ? author.affiliation
             : "",
         orcid: author?.orcid ?? null,
-        contributions: Array.isArray(author?.contributions)
-          ? author.contributions
-          : [],
+        contributions: normalizeContributions(author?.contributions),
       }))
     : [];
 
@@ -157,7 +191,7 @@ function createStore() {
       ),
     updateAuthorProperty: (
       idx: number,
-      type: "name" | "email" | "affiliation" | "orcid",
+      type: "name" | "email" | "affiliation" | "orcid" | "contributions",
       value: string | string[] | null,
     ) =>
       updateValue<StoreData["authors"]>("authors", (authors) =>

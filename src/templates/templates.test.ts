@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { Author } from "../store";
 import { generateACMAuthorList } from "./acm";
 import { generateCGFAuthorList } from "./cgf";
+import { generateCreditContributionList } from "./credit";
 import { generateIEEEAuthorList } from "./ieee";
 import { generatePlainTextAuthorList } from "./plain-text";
 
@@ -123,6 +124,36 @@ describe("generatePlainTextAuthorList", () => {
     ]);
 
     expect(output).toBe("Ada Lovelace, Alan Turing, Grace Hopper");
+    expect(output).toMatchSnapshot();
+  });
+});
+
+describe("generateCreditContributionList", () => {
+  it("returns fallback when no valid contributions are set", () => {
+    const output = generateCreditContributionList([
+      makeAuthor({ name: "Ada Lovelace" }),
+      makeAuthor({ name: "Alan Turing", contributions: [] }),
+    ]);
+
+    expect(output).toBe("No CRediT contributions assigned.");
+    expect(output).toMatchSnapshot();
+  });
+
+  it("renders per-author CRediT roles in taxonomy order", () => {
+    const output = generateCreditContributionList([
+      makeAuthor({
+        name: "Ada Lovelace",
+        contributions: ["Software", "Conceptualization", "Validation"],
+      }),
+      makeAuthor({
+        name: "Alan Turing",
+        contributions: ["Methodology", "Writing - review and editing"],
+      }),
+    ]);
+
+    expect(output).toBe(
+      "Ada Lovelace: Conceptualization, Software, Validation.\nAlan Turing: Methodology, Writing - review and editing.",
+    );
     expect(output).toMatchSnapshot();
   });
 });

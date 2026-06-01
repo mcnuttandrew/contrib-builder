@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Author } from "./store";
+  import ContributionsCell from "./ContributionsCell.svelte";
   import Popover from "./Popover.svelte";
   import store from "./store";
   let { author, idx }: { author: Author; idx: number } = $props();
@@ -29,10 +30,13 @@
     "rounded border border-slate-300 px-2 py-1 text-xs text-slate-600 hover:bg-slate-100";
   const multiOptionCellStyle =
     "w-full rounded-md border border-amber-300 bg-amber-50 px-2 py-2 text-left text-sm text-amber-800 hover:bg-amber-100";
+
+  const inputStyle =
+    "w-full rounded-md border border-slate-300 bg-slate-50 py-1 px-2";
 </script>
 
 <div
-  class="grid gap-2 border-b border-slate-200 p-3 last:border-b-0 md:grid-cols-[minmax(12rem,1.25fr)_minmax(11rem,1fr)_minmax(11rem,1fr)_minmax(14rem,1.4fr)_auto] md:items-start md:gap-3"
+  class="grid gap-2 border-b border-slate-200 p-3 last:border-b-0 md:grid-cols-[minmax(12rem,1.25fr)_minmax(11rem,1fr)_minmax(11rem,1fr)_minmax(14rem,1.4fr)_minmax(14rem,1.4fr)_auto] md:items-start md:gap-3"
 >
   <div class="flex min-w-0 flex-col gap-1">
     <div
@@ -42,7 +46,7 @@
     </div>
     <input
       value={author.name}
-      class="w-full rounded-md border border-slate-300 bg-slate-50 p-2"
+      class={inputStyle}
       placeholder="Author name"
       onchange={(e) => {
         // @ts-ignore
@@ -51,6 +55,16 @@
           return;
         }
         store.updateAuthorProperty(idx, "name", value);
+      }}
+    />
+    <input
+      value={author.email}
+      class={inputStyle}
+      placeholder="email@example.com"
+      onchange={(e) => {
+        // @ts-ignore
+        const value = e.target?.value;
+        store.updateAuthorProperty(idx, "email", value?.trim() ?? "");
       }}
     />
     <div class="flex items-center justify-start gap-1">
@@ -195,24 +209,6 @@
     <div
       class="text-[11px] font-semibold uppercase tracking-wide text-slate-500 md:hidden"
     >
-      Email
-    </div>
-    <input
-      value={author.email}
-      class="w-full rounded-md border border-slate-300 bg-slate-50 p-2"
-      placeholder="email@example.com"
-      onchange={(e) => {
-        // @ts-ignore
-        const value = e.target?.value;
-        store.updateAuthorProperty(idx, "email", value?.trim() ?? "");
-      }}
-    />
-  </div>
-
-  <div class="flex min-w-0 flex-col gap-1">
-    <div
-      class="text-[11px] font-semibold uppercase tracking-wide text-slate-500 md:hidden"
-    >
       Affiliation
     </div>
     {#if author.affiliation && Array.isArray(author.affiliation)}
@@ -271,7 +267,7 @@
     {/if}
     <input
       value={typeof author.affiliation === "string" ? author.affiliation : ""}
-      class="w-full rounded-md border border-slate-300 bg-slate-50 p-2"
+      class={inputStyle}
       placeholder="Organization"
       onchange={(e) => {
         // @ts-ignore
@@ -280,4 +276,6 @@
       }}
     />
   </div>
+
+  <ContributionsCell {author} {idx} />
 </div>
