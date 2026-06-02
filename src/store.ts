@@ -82,9 +82,7 @@ function collectContributionNames(store: any): string[] {
 
 function resolveCreditTaxonomyId(store: any): CreditTaxonomyId {
   const storedTaxonomyId =
-    typeof store?.creditTaxonomyId === "string"
-      ? store.creditTaxonomyId
-      : null;
+    typeof store?.creditTaxonomyId === "string" ? store.creditTaxonomyId : null;
 
   if (isKnownCreditTaxonomyId(storedTaxonomyId)) {
     return storedTaxonomyId;
@@ -99,10 +97,12 @@ function resolveCreditTaxonomyId(store: any): CreditTaxonomyId {
   );
 
   const hasGroundworksOnlyRole = contributionNames.some(
-    (role) => role && !legacyRoleNames.has(role) && groundworksRoleNames.has(role),
+    (role) =>
+      role && !legacyRoleNames.has(role) && groundworksRoleNames.has(role),
   );
   const hasLegacyOnlyRole = contributionNames.some(
-    (role) => role && !groundworksRoleNames.has(role) && legacyRoleNames.has(role),
+    (role) =>
+      role && !groundworksRoleNames.has(role) && legacyRoleNames.has(role),
   );
 
   if (hasGroundworksOnlyRole && !hasLegacyOnlyRole) {

@@ -240,11 +240,17 @@ const creditTaxonomyById = new Map<string, CreditTaxonomy>(
   CREDIT_TAXONOMIES.map((taxonomy) => [taxonomy.id, taxonomy]),
 );
 
-const creditContributionRoleIdByLabel = new Map<string, CreditContributionRoleId>();
+const creditContributionRoleIdByLabel = new Map<
+  string,
+  CreditContributionRoleId
+>();
 
 for (const taxonomy of CREDIT_TAXONOMIES) {
   for (const role of taxonomy.roles) {
-    creditContributionRoleIdByLabel.set(normalizeCreditLabel(role.name), role.id);
+    creditContributionRoleIdByLabel.set(
+      normalizeCreditLabel(role.name),
+      role.id,
+    );
     for (const alias of role.aliases ?? []) {
       creditContributionRoleIdByLabel.set(normalizeCreditLabel(alias), role.id);
     }
@@ -266,7 +272,10 @@ export function getCreditTaxonomy(
   return creditTaxonomyById.get(DEFAULT_CREDIT_TAXONOMY_ID)!;
 }
 
-export function getCreditTaxonomyRole(creditTaxonomy: CreditTaxonomy, roleId: string) {
+export function getCreditTaxonomyRole(
+  creditTaxonomy: CreditTaxonomy,
+  roleId: string,
+) {
   return creditTaxonomy.roles.find((role) => role.id === roleId);
 }
 
@@ -305,11 +314,15 @@ function normalizeContributionValue(
   creditTaxonomyId: CreditTaxonomyId,
 ): CreditContributionRoleName[] {
   return normalizeCreditContributions(value).length > 0
-    ? normalizeCreditContributions(value).map((roleId) => {
-        const taxonomy = getCreditTaxonomy(creditTaxonomyId);
-        const role = taxonomy.roles.find((candidate) => candidate.id === roleId);
-        return role?.name ?? "";
-      }).filter(Boolean)
+    ? normalizeCreditContributions(value)
+        .map((roleId) => {
+          const taxonomy = getCreditTaxonomy(creditTaxonomyId);
+          const role = taxonomy.roles.find(
+            (candidate) => candidate.id === roleId,
+          );
+          return role?.name ?? "";
+        })
+        .filter(Boolean)
     : [];
 }
 
@@ -341,7 +354,9 @@ export function normalizeCreditContributionRecord(
   return record;
 }
 
-export function normalizeCreditContributions(value: unknown): CreditContributionRoleId[] {
+export function normalizeCreditContributions(
+  value: unknown,
+): CreditContributionRoleId[] {
   if (!Array.isArray(value)) {
     return [];
   }
@@ -364,7 +379,8 @@ export function normalizeCreditContributions(value: unknown): CreditContribution
     }
 
     const normalized = normalizeCreditLabel(candidate);
-    const contributionId = creditContributionRoleIdByLabel.get(normalized) ??
+    const contributionId =
+      creditContributionRoleIdByLabel.get(normalized) ??
       (candidate.trim() ? candidate.trim() : "");
 
     if (!contributionId || seen.has(contributionId)) {

@@ -60,10 +60,8 @@
     Contributions ({activeTaxonomy.label})
   </div>
   <Popover
-    label={
-      activeContributions.join(", ") ||
-      `Select ${activeTaxonomy.label} contributions`
-    }
+    label={activeContributions.join(", ") ||
+      `Select ${activeTaxonomy.label} contributions`}
     buttonClass={activeContributions.length > 0
       ? "w-full rounded-md border border-emerald-300 bg-emerald-50 px-2 py-2 text-left text-sm text-emerald-800 hover:bg-emerald-100 cursor-pointer"
       : "w-full rounded-md border border-dashed border-slate-300 bg-slate-50 px-2 py-2 text-left text-sm text-slate-500 hover:bg-slate-100 cursor-pointer"}

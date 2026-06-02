@@ -46,6 +46,32 @@ Alan Turing: Methodology, Writing – review & editing."
 
 exports[`generateCreditContributionList > returns fallback when no valid contributions are set 1`] = `"No CReDIT-fAIR contributions assigned."`;
 
+exports[`generateCreditContributionMatrix > renders a latex matrix in Ground Works taxonomy order 1`] = `
+"\\begin{tabular}{lcc}
+Role & Ada Lovelace & Alan Turing \\\\
+\\hline
+Conceptualization & X &  \\\\
+Methodology &  & X \\\\
+Production - Technical & X &  \\\\
+Validation & X &  \\\\
+Writing – review \\& editing &  & X \\\\
+\\end{tabular}"
+`;
+
+exports[`generateCreditContributionMatrix > renders legacy CRediT role names when that taxonomy is selected 1`] = `
+"\\begin{tabular}{lcc}
+Role & Ada Lovelace & Alan Turing \\\\
+\\hline
+Conceptualization & X &  \\\\
+Methodology &  & X \\\\
+Software & X &  \\\\
+Validation & X &  \\\\
+Writing - review and editing &  & X \\\\
+\\end{tabular}"
+`;
+
+exports[`generateCreditContributionMatrix > returns fallback when no valid contributions are set 1`] = `"No CReDIT-fAIR contributions assigned."`;
+
 exports[`generateIEEEAuthorList > formats name, email and affiliation for valid authors 1`] = `
 "\\author{Ada Lovelace\\thanks{e-mail: ada@example.com}\\\\ %
      \\scriptsize University of Example %}"

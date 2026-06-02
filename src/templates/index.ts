@@ -1,7 +1,10 @@
 import { generateIEEEAuthorList } from "./ieee";
 import { generateACMAuthorList } from "./acm";
 import { generateCGFAuthorList } from "./cgf";
-import { generateCreditContributionList } from "./credit";
+import {
+  generateCreditContributionList,
+  generateCreditContributionMatrix,
+} from "./credit";
 import { generatePlainTextAuthorList } from "./plain-text";
 import type { CreditTaxonomyId } from "../creditTaxonomy";
 
@@ -15,6 +18,7 @@ const templates: Record<string, TemplateGenerator> = {
   ACM: generateACMAuthorList,
   CGF: generateCGFAuthorList,
   Contributions: generateCreditContributionList,
+  "Contribution Matrix": generateCreditContributionMatrix,
   "Plain Text": generatePlainTextAuthorList,
 };
 export default templates;

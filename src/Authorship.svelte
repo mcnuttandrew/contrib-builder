@@ -8,10 +8,7 @@
   const templateNames = Object.keys(templates) as Array<keyof typeof templates>;
   const activeTaxonomy = $derived(getCreditTaxonomy($store.creditTaxonomyId));
   const latexOutput = $derived(
-    templates[template](
-      $store.authors,
-      activeTaxonomy.id as CreditTaxonomyId,
-    ),
+    templates[template]($store.authors, activeTaxonomy.id as CreditTaxonomyId),
   );
 
   type LatexToken = {
