@@ -10,6 +10,7 @@ const generateCreditContributionMatrix = templates["Contribution Matrix"];
 const generatePlainTextAuthorList = templates["Plain Text"];
 import {
   setCreditContributions,
+  setCreditContributionLevel,
   DEFAULT_CREDIT_TAXONOMY_ID,
   LEGACY_CREDIT_TAXONOMY_ID,
 } from "../creditTaxonomy";
@@ -154,6 +155,16 @@ describe("generateCreditContributionList", () => {
   });
 
   it("renders per-author roles in Ground Works taxonomy order", () => {
+    const alanContributions = setCreditContributionLevel(
+      setCreditContributions({}, DEFAULT_CREDIT_TAXONOMY_ID, [
+        "Methodology",
+        "Writing – review & editing",
+      ]),
+      DEFAULT_CREDIT_TAXONOMY_ID,
+      "Methodology",
+      "low",
+    );
+
     const output = generateCreditContributionList(
       [
         makeAuthor({
@@ -166,18 +177,14 @@ describe("generateCreditContributionList", () => {
         }),
         makeAuthor({
           name: "Alan Turing",
-          contributions: setCreditContributions(
-            {},
-            DEFAULT_CREDIT_TAXONOMY_ID,
-            ["Methodology", "Writing – review & editing"],
-          ),
+          contributions: alanContributions,
         }),
       ],
       DEFAULT_CREDIT_TAXONOMY_ID,
     );
 
     expect(output).toBe(
-      "Ada Lovelace: Conceptualization, Production - Technical, Validation.\nAlan Turing: Methodology, Writing – review & editing.",
+      "Ada Lovelace: Conceptualization (high), Production - Technical (high), Validation (high).\nAlan Turing: Methodology (low), Writing – review & editing (high).",
     );
     expect(output).toMatchSnapshot();
   });
@@ -205,7 +212,7 @@ describe("generateCreditContributionList", () => {
     );
 
     expect(output).toBe(
-      "Ada Lovelace: Conceptualization, Software, Validation.\nAlan Turing: Methodology, Writing - review and editing.",
+      "Ada Lovelace: Conceptualization (high), Software (high), Validation (high).\nAlan Turing: Methodology (high), Writing - review and editing (high).",
     );
     expect(output).toMatchSnapshot();
   });
@@ -230,6 +237,16 @@ describe("generateCreditContributionMatrix", () => {
   });
 
   it("renders a latex matrix in Ground Works taxonomy order", () => {
+    const alanContributions = setCreditContributionLevel(
+      setCreditContributions({}, DEFAULT_CREDIT_TAXONOMY_ID, [
+        "Methodology",
+        "Writing – review & editing",
+      ]),
+      DEFAULT_CREDIT_TAXONOMY_ID,
+      "Methodology",
+      "low",
+    );
+
     const output = generateCreditContributionMatrix(
       [
         makeAuthor({
@@ -242,11 +259,7 @@ describe("generateCreditContributionMatrix", () => {
         }),
         makeAuthor({
           name: "Alan Turing",
-          contributions: setCreditContributions(
-            {},
-            DEFAULT_CREDIT_TAXONOMY_ID,
-            ["Methodology", "Writing – review & editing"],
-          ),
+          contributions: alanContributions,
         }),
         makeAuthor({ name: "   " }),
       ],
@@ -254,7 +267,17 @@ describe("generateCreditContributionMatrix", () => {
     );
 
     expect(output).toBe(
-        "\\begin{tabular}{lcc}\nRole & Ada Lovelace & Alan Turing \\\\\n\\hline\nConceptualization & X &  \\\\\nMethodology &  & X \\\\\nProduction - Technical & X &  \\\\\nValidation & X &  \\\\\nWriting – review \\& editing &  & X \\\\\n\\end{tabular}",
+      [
+        "\\begin{tabular}{lcc}",
+        "Role & Ada Lovelace & Alan Turing \\\\",
+        "\\hline",
+        "Conceptualization & H &  \\\\",
+        "Methodology &  & L \\\\",
+        "Production - Technical & H &  \\\\",
+        "Validation & H &  \\\\",
+        "Writing – review \\& editing &  & H \\\\",
+        "\\end{tabular}",
+      ].join("\n"),
     );
     expect(output).toMatchSnapshot();
   });
@@ -282,8 +305,8 @@ describe("generateCreditContributionMatrix", () => {
     );
 
     expect(output).toContain("Role & Ada Lovelace & Alan Turing \\\\");
-    expect(output).toContain("Software & X &  \\\\");
-    expect(output).toContain("Writing - review and editing &  & X \\\\");
+    expect(output).toContain("Software & H &  \\\\");
+    expect(output).toContain("Writing - review and editing &  & H \\\\");
     expect(output).toMatchSnapshot();
   });
 });

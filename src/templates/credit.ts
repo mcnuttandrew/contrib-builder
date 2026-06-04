@@ -1,6 +1,6 @@
 import {
   DEFAULT_CREDIT_TAXONOMY_ID,
-  getCreditContributions,
+  getCreditContributionEntries,
   getCreditTaxonomy,
   type CreditTaxonomyId,
 } from "../creditTaxonomy";
@@ -37,7 +37,7 @@ export function generateCreditContributionList(
   const validAuthors = getValidAuthors(authors);
   const authorsWithContributions = validAuthors.filter(
     (author) =>
-      getCreditContributions(
+      getCreditContributionEntries(
         author.contributions,
         creditTaxonomy.id as CreditTaxonomyId,
       ).length > 0,
@@ -49,15 +49,24 @@ export function generateCreditContributionList(
 
   return authorsWithContributions
     .map((author) => {
-      const contributions = getCreditContributions(
+      const contributions = getCreditContributionEntries(
         author.contributions,
         creditTaxonomy.id as CreditTaxonomyId,
       );
       const orderedRoles = sortByTaxonomyRoleOrder(
-        contributions,
+        contributions.map((entry) => entry.name),
         creditTaxonomy.id,
       );
-      return `${author.name.trim()}: ${orderedRoles.join(", ")}.`;
+
+      const levelByRole = new Map(
+        contributions.map((entry) => [entry.name, entry.level]),
+      );
+      const leveledRoles = orderedRoles.map((role) => {
+        const level = levelByRole.get(role) ?? "high";
+        return `${role} (${level})`;
+      });
+
+      return `${author.name.trim()}: ${leveledRoles.join(", ")}.`;
     })
     .join("\n");
 }
@@ -70,7 +79,7 @@ export function generateCreditContributionMatrix(
   const validAuthors = getValidAuthors(authors);
   const authorsWithContributions = validAuthors.filter(
     (author) =>
-      getCreditContributions(
+      getCreditContributionEntries(
         author.contributions,
         creditTaxonomy.id as CreditTaxonomyId,
       ).length > 0,
@@ -82,10 +91,10 @@ export function generateCreditContributionMatrix(
 
   const orderedRoles = sortByTaxonomyRoleOrder(
     authorsWithContributions.flatMap((author) =>
-      getCreditContributions(
+      getCreditContributionEntries(
         author.contributions,
         creditTaxonomy.id as CreditTaxonomyId,
-      ),
+      ).map((entry) => entry.name),
     ),
     creditTaxonomy.id,
   );
@@ -93,15 +102,25 @@ export function generateCreditContributionMatrix(
   const columnSpec = `l${"c".repeat(authorsWithContributions.length)}`;
   const headerRow = [
     latexEscape("Role"),
-    ...authorsWithContributions.map((author) => latexEscape(author.name.trim())),
+    ...authorsWithContributions.map((author) =>
+      latexEscape(author.name.trim()),
+    ),
   ].join(" & ");
   const bodyRows = orderedRoles.map((role) => {
     const cells = authorsWithContributions.map((author) => {
-      const contributions = getCreditContributions(
+      const contributions = getCreditContributionEntries(
         author.contributions,
         creditTaxonomy.id as CreditTaxonomyId,
       );
-      return contributions.includes(role) ? "X" : "";
+      const matchingContribution = contributions.find(
+        (entry) => entry.name === role,
+      );
+
+      if (!matchingContribution) {
+        return "";
+      }
+
+      return matchingContribution.level === "high" ? "H" : "L";
     });
 
     return [latexEscape(role), ...cells].join(" & ");

@@ -35,13 +35,13 @@ exports[`generateCGFAuthorList > returns anonymous fallback when there are no va
 `;
 
 exports[`generateCreditContributionList > renders legacy CRediT roles when that taxonomy is selected 1`] = `
-"Ada Lovelace: Conceptualization, Software, Validation.
-Alan Turing: Methodology, Writing - review and editing."
+"Ada Lovelace: Conceptualization (high), Software (high), Validation (high).
+Alan Turing: Methodology (high), Writing - review and editing (high)."
 `;
 
 exports[`generateCreditContributionList > renders per-author roles in Ground Works taxonomy order 1`] = `
-"Ada Lovelace: Conceptualization, Production - Technical, Validation.
-Alan Turing: Methodology, Writing – review & editing."
+"Ada Lovelace: Conceptualization (high), Production - Technical (high), Validation (high).
+Alan Turing: Methodology (low), Writing – review & editing (high)."
 `;
 
 exports[`generateCreditContributionList > returns fallback when no valid contributions are set 1`] = `"No CReDIT-fAIR contributions assigned."`;
@@ -50,11 +50,11 @@ exports[`generateCreditContributionMatrix > renders a latex matrix in Ground Wor
 "\\begin{tabular}{lcc}
 Role & Ada Lovelace & Alan Turing \\\\
 \\hline
-Conceptualization & X &  \\\\
-Methodology &  & X \\\\
-Production - Technical & X &  \\\\
-Validation & X &  \\\\
-Writing – review \\& editing &  & X \\\\
+Conceptualization & H &  \\\\
+Methodology &  & L \\\\
+Production - Technical & H &  \\\\
+Validation & H &  \\\\
+Writing – review \\& editing &  & H \\\\
 \\end{tabular}"
 `;
 
@@ -62,11 +62,11 @@ exports[`generateCreditContributionMatrix > renders legacy CRediT role names whe
 "\\begin{tabular}{lcc}
 Role & Ada Lovelace & Alan Turing \\\\
 \\hline
-Conceptualization & X &  \\\\
-Methodology &  & X \\\\
-Software & X &  \\\\
-Validation & X &  \\\\
-Writing - review and editing &  & X \\\\
+Conceptualization & H &  \\\\
+Methodology &  & H \\\\
+Software & H &  \\\\
+Validation & H &  \\\\
+Writing - review and editing &  & H \\\\
 \\end{tabular}"
 `;
 

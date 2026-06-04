@@ -232,8 +232,13 @@ export type CreditTaxonomyId = (typeof CREDIT_TAXONOMIES)[number]["id"];
 export type CreditContributionRoleId = CreditContributionRole["id"];
 export type CreditContributionRoleName =
   (typeof CREDIT_TAXONOMIES)[number]["roles"][number]["name"];
+export type CreditContributionLevel = "high" | "low";
+export interface CreditContributionEntry {
+  name: CreditContributionRoleName;
+  level: CreditContributionLevel;
+}
 export type CreditContributionRecord = Partial<
-  Record<CreditTaxonomyId, CreditContributionRoleName[]>
+  Record<CreditTaxonomyId, CreditContributionEntry[]>
 >;
 
 const creditTaxonomyById = new Map<string, CreditTaxonomy>(
@@ -295,7 +300,29 @@ export function getCreditContributions(
   contributions: CreditContributionRecord | undefined,
   creditTaxonomyId: CreditTaxonomyId,
 ): CreditContributionRoleName[] {
+  return getCreditContributionEntries(contributions, creditTaxonomyId).map(
+    (entry) => entry.name,
+  );
+}
+
+export function getCreditContributionEntries(
+  contributions: CreditContributionRecord | undefined,
+  creditTaxonomyId: CreditTaxonomyId,
+): CreditContributionEntry[] {
   return contributions?.[creditTaxonomyId] ?? [];
+}
+
+export function getCreditContributionLevel(
+  contributions: CreditContributionRecord | undefined,
+  creditTaxonomyId: CreditTaxonomyId,
+  roleName: CreditContributionRoleName,
+): CreditContributionLevel | "none" {
+  const match = getCreditContributionEntries(
+    contributions,
+    creditTaxonomyId,
+  ).find((entry) => entry.name === roleName);
+
+  return match?.level ?? "none";
 }
 
 export function setCreditContributions(
@@ -303,27 +330,134 @@ export function setCreditContributions(
   creditTaxonomyId: CreditTaxonomyId,
   nextContributions: CreditContributionRoleName[],
 ): CreditContributionRecord {
+  const seen = new Set<string>();
+  const normalized = nextContributions
+    .filter((name) => {
+      if (seen.has(name)) {
+        return false;
+      }
+
+      seen.add(name);
+      return true;
+    })
+    .map((name) => ({
+      name,
+      level: "high" as CreditContributionLevel,
+    }));
+
   return {
     ...(contributions ?? {}),
-    [creditTaxonomyId]: nextContributions,
+    [creditTaxonomyId]: normalized,
   };
+}
+
+export function setCreditContributionLevel(
+  contributions: CreditContributionRecord | undefined,
+  creditTaxonomyId: CreditTaxonomyId,
+  roleName: CreditContributionRoleName,
+  level: CreditContributionLevel | "none",
+): CreditContributionRecord {
+  const currentEntries = getCreditContributionEntries(
+    contributions,
+    creditTaxonomyId,
+  );
+
+  const nextEntries =
+    level === "none"
+      ? currentEntries.filter((entry) => entry.name !== roleName)
+      : (() => {
+          const existingIndex = currentEntries.findIndex(
+            (entry) => entry.name === roleName,
+          );
+
+          if (existingIndex === -1) {
+            return [...currentEntries, { name: roleName, level }];
+          }
+
+          return currentEntries.map((entry, index) =>
+            index === existingIndex ? { ...entry, level } : entry,
+          );
+        })();
+
+  return {
+    ...(contributions ?? {}),
+    [creditTaxonomyId]: nextEntries,
+  };
+}
+
+function normalizeContributionLevel(
+  value: unknown,
+): CreditContributionLevel | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const normalized = value.trim().toLowerCase();
+
+  if (normalized === "high" || normalized === "low") {
+    return normalized;
+  }
+
+  return null;
 }
 
 function normalizeContributionValue(
   value: unknown,
   creditTaxonomyId: CreditTaxonomyId,
-): CreditContributionRoleName[] {
-  return normalizeCreditContributions(value).length > 0
-    ? normalizeCreditContributions(value)
-        .map((roleId) => {
-          const taxonomy = getCreditTaxonomy(creditTaxonomyId);
-          const role = taxonomy.roles.find(
-            (candidate) => candidate.id === roleId,
-          );
-          return role?.name ?? "";
-        })
-        .filter(Boolean)
-    : [];
+): CreditContributionEntry[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  const taxonomy = getCreditTaxonomy(creditTaxonomyId);
+  const normalized: CreditContributionEntry[] = [];
+  const seen = new Set<string>();
+
+  for (const entry of value) {
+    let candidate = "";
+    let level: CreditContributionLevel = "high";
+
+    if (typeof entry === "string") {
+      candidate = entry;
+    } else if (
+      entry &&
+      typeof entry === "object" &&
+      "name" in entry &&
+      typeof entry.name === "string"
+    ) {
+      candidate = entry.name;
+      const nextLevel = normalizeContributionLevel(
+        (entry as { level?: unknown }).level,
+      );
+      if (nextLevel) {
+        level = nextLevel;
+      }
+    }
+
+    const normalizedLabel = normalizeCreditLabel(candidate);
+    const roleId =
+      creditContributionRoleIdByLabel.get(normalizedLabel) ??
+      (candidate.trim() ? candidate.trim() : "");
+
+    if (!roleId || seen.has(roleId)) {
+      continue;
+    }
+
+    const role = taxonomy.roles.find(
+      (candidateRole) => candidateRole.id === roleId,
+    );
+    if (!role) {
+      continue;
+    }
+
+    seen.add(roleId);
+    normalized.push({
+      name: role.name as CreditContributionRoleName,
+      level,
+    });
+  }
+
+  return normalized;
 }
 
 export function normalizeCreditContributionRecord(

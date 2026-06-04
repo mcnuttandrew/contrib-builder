@@ -7,7 +7,6 @@ import {
   isKnownCreditTaxonomyId,
   normalizeCreditContributionRecord,
   type CreditContributionRecord,
-  type CreditContributionRoleName,
   type CreditTaxonomyId,
 } from "./creditTaxonomy";
 export interface Author {
@@ -120,29 +119,6 @@ function normalizeContributions(
   value: unknown,
   creditTaxonomyId: CreditTaxonomyId,
 ): CreditContributionRecord {
-  if (Array.isArray(value)) {
-    return {
-      [creditTaxonomyId]: value
-        .map((entry) => {
-          if (typeof entry === "string") {
-            return entry;
-          }
-
-          if (
-            entry &&
-            typeof entry === "object" &&
-            "name" in entry &&
-            typeof entry.name === "string"
-          ) {
-            return entry.name;
-          }
-
-          return "";
-        })
-        .filter((role): role is CreditContributionRoleName => role.length > 0),
-    };
-  }
-
   return normalizeCreditContributionRecord(value, creditTaxonomyId);
 }
 
