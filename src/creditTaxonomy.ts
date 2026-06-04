@@ -213,6 +213,74 @@ const LEGACY_CREDIT_ROLES: readonly CreditContributionRole[] = [
   },
 ] as const;
 
+const CREDIT_CALGARY_VIS_ROLES: readonly CreditContributionRole[] = [
+  {
+    id: "conceptualization",
+    name: "Conceptualization",
+    description:
+      "Ideation, formulation, or evolution of overarching research goals and aims.",
+  },
+  {
+    id: "methodology",
+    name: "Methodology",
+    description: "Development, design, and/or choice of methods.",
+  },
+  {
+    id: "funding",
+    name: "Funding",
+    description:
+      "Acquisition of financial support for the project leading to this publication.",
+    aliases: ["Funding acquisition"],
+  },
+  {
+    id: "investigation",
+    name: "Investigation",
+    description:
+      "Conducting research and investigation, performing observation, and/or collecting evidence.",
+    aliases: ["Investigation and inquiry"],
+  },
+  {
+    id: "development",
+    name: "Development",
+    description:
+      "Design, prototyping, creation, and maintenance of software, hardware, processes, datasets, and other virtual/physical systems.",
+  },
+  {
+    id: "verification",
+    name: "Verification",
+    description:
+      "Establishing the reliability of knowledge claims via empirical or qualitative validation, experiments, replication/reproducibility, assessment of transferability, etc.",
+    aliases: ["Validation"],
+  },
+  {
+    id: "analysis",
+    name: "Analysis",
+    description:
+      "Application of statistical, mathematical, computational, qualitative, or other techniques to analyze or synthesize data and derive findings.",
+    aliases: ["Formal analysis", "Formal Analysis", "Reflective Analysis"],
+  },
+  {
+    id: "writing",
+    name: "Writing",
+    description: "Authoring the initial drafts of the publication.",
+    aliases: ["Writing - original draft", "Writing – original draft"],
+  },
+  {
+    id: "editing",
+    name: "Editing",
+    description:
+      "Critical review, commentary, or revision of drafts of the publication.",
+    aliases: ["Writing - review and editing", "Writing – review & editing"],
+  },
+  {
+    id: "visuals",
+    name: "Visuals",
+    description:
+      "Preparation, creation and/or presentation of images, graphics, visualizations, tables, video, performances, installations and other visual elements used in the work.",
+    aliases: ["Visualization"],
+  },
+] as const;
+
 export const CREDIT_TAXONOMIES = [
   {
     id: "groundworks-credit-fair",
@@ -225,6 +293,12 @@ export const CREDIT_TAXONOMIES = [
     label: "CRediT",
     emptyContributionLabel: "No CRediT contributions assigned.",
     roles: LEGACY_CREDIT_ROLES,
+  },
+  {
+    id: "credit-calgary-vis",
+    label: "credit-calgary (vis)",
+    emptyContributionLabel: "No credit-calgary (vis) contributions assigned.",
+    roles: CREDIT_CALGARY_VIS_ROLES,
   },
 ] as const satisfies readonly CreditTaxonomy[];
 
@@ -486,44 +560,4 @@ export function normalizeCreditContributionRecord(
   }
 
   return record;
-}
-
-export function normalizeCreditContributions(
-  value: unknown,
-): CreditContributionRoleId[] {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  const contributions: CreditContributionRoleId[] = [];
-  const seen = new Set<string>();
-
-  for (const entry of value) {
-    let candidate = "";
-
-    if (typeof entry === "string") {
-      candidate = entry;
-    } else if (
-      entry &&
-      typeof entry === "object" &&
-      "name" in entry &&
-      typeof entry.name === "string"
-    ) {
-      candidate = entry.name;
-    }
-
-    const normalized = normalizeCreditLabel(candidate);
-    const contributionId =
-      creditContributionRoleIdByLabel.get(normalized) ??
-      (candidate.trim() ? candidate.trim() : "");
-
-    if (!contributionId || seen.has(contributionId)) {
-      continue;
-    }
-
-    seen.add(contributionId);
-    contributions.push(contributionId as CreditContributionRoleId);
-  }
-
-  return contributions;
 }

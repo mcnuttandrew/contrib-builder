@@ -1,5 +1,6 @@
 import { writable } from "svelte/store";
 import {
+  CREDIT_TAXONOMIES,
   DEFAULT_CREDIT_TAXONOMY_ID,
   getCreditTaxonomy,
   getCreditTaxonomyRoleNames,
@@ -88,28 +89,28 @@ function resolveCreditTaxonomyId(store: any): CreditTaxonomyId {
   }
 
   const contributionNames = collectContributionNames(store);
-  const groundworksRoleNames = new Set(
-    getCreditTaxonomyRoleNames(getCreditTaxonomy(DEFAULT_CREDIT_TAXONOMY_ID)),
-  );
-  const legacyRoleNames = new Set(
-    getCreditTaxonomyRoleNames(getCreditTaxonomy(LEGACY_CREDIT_TAXONOMY_ID)),
+  const taxonomyRoleSets = CREDIT_TAXONOMIES.map((taxonomy) => ({
+    id: taxonomy.id,
+    roleNames: new Set(
+      getCreditTaxonomyRoleNames(getCreditTaxonomy(taxonomy.id)),
+    ),
+  }));
+
+  const scores = taxonomyRoleSets.map(({ id, roleNames }) => ({
+    id,
+    score: contributionNames.reduce(
+      (total, role) => total + (roleNames.has(role) ? 1 : 0),
+      0,
+    ),
+  }));
+
+  const bestMatch = scores.reduce(
+    (best, current) => (current.score > best.score ? current : best),
+    { id: DEFAULT_CREDIT_TAXONOMY_ID, score: 0 },
   );
 
-  const hasGroundworksOnlyRole = contributionNames.some(
-    (role) =>
-      role && !legacyRoleNames.has(role) && groundworksRoleNames.has(role),
-  );
-  const hasLegacyOnlyRole = contributionNames.some(
-    (role) =>
-      role && !groundworksRoleNames.has(role) && legacyRoleNames.has(role),
-  );
-
-  if (hasGroundworksOnlyRole && !hasLegacyOnlyRole) {
-    return DEFAULT_CREDIT_TAXONOMY_ID;
-  }
-
-  if (hasLegacyOnlyRole && !hasGroundworksOnlyRole) {
-    return LEGACY_CREDIT_TAXONOMY_ID;
+  if (bestMatch.score > 0) {
+    return bestMatch.id;
   }
 
   return DEFAULT_CREDIT_TAXONOMY_ID;
