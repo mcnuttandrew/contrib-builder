@@ -94,6 +94,11 @@
           class={token.className}>{token.text}</span
         >{/each}</pre>
   </div>
+  <span class="text-xs italic"
+    >Authors are encouraged to alter this output as need be in their own
+    documents. For instance, our notion of High/Low/No contribution might now
+    map to a model of All/None or Primary/Secondary.</span
+  >
 </div>
 
 <style>

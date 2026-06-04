@@ -1,4 +1,3 @@
-- matrix view
 - calgary style
 - brew your own
 - multiple co-first authors
