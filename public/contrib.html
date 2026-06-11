@@ -1,0 +1,1803 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Contribution Matrix Builder</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Spline+Sans+Mono:wght@400;500&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap');
+
+  :root {
+    --paper: #ffffff;
+    --paper-2: #f4f4f4;
+    --ink: #000000;
+    --ink-soft: #555555;
+    --rule: #cccccc;
+    --rule-strong: #000000;
+    --accent: #000000;
+    --accent-soft: #444444;
+    --cell-hover: #eeeeee;
+    --shadow: rgba(0,0,0,0.12);
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Newsreader', Georgia, serif;
+    font-size: 16px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    min-height: 100vh;
+  }
+
+  .wrap {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 32px 28px 90px;
+  }
+
+  /* ---------- Toolbar ---------- */
+  .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 14px;
+    align-items: center;
+    margin-bottom: 26px;
+    padding: 14px 16px;
+    background: var(--paper-2);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+  }
+  .tool-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .tool-group + .tool-group {
+    border-left: 1px solid var(--rule);
+    padding-left: 14px;
+  }
+  .tool-label {
+    font-family: 'Spline Sans Mono', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+
+  button, select {
+    font-family: 'Spline Sans Mono', monospace;
+    font-size: 0.74rem;
+    letter-spacing: 0.04em;
+    color: var(--ink);
+    background: var(--paper);
+    border: 1px solid var(--rule-strong);
+    padding: 6px 11px;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: all 0.13s ease;
+  }
+  button:hover, select:hover {
+    background: var(--ink);
+    color: var(--paper);
+  }
+  button:active { transform: translateY(1px); }
+  button.ghost {
+    border-color: var(--rule);
+    color: var(--ink-soft);
+  }
+  button.danger:hover { background: var(--accent); border-color: var(--accent); }
+  button.armed { background: var(--accent); color: var(--paper); border-color: var(--accent); }
+  select { padding: 6px 8px; }
+  select:hover { background: var(--paper); color: var(--ink); }
+
+  .stepper { display: inline-flex; align-items: center; border: 1px solid var(--rule-strong); border-radius: 2px; overflow: hidden; }
+  .stepper button { border: none; border-radius: 0; padding: 6px 10px; }
+  .stepper .val { font-family: 'Spline Sans Mono', monospace; font-size: 0.8rem; padding: 0 12px; min-width: 30px; text-align: center; }
+
+  /* ---------- Matrix ---------- */
+  .matrix-scroll {
+    overflow-x: auto;
+    overflow-y: clip;
+    padding-top: 30px;
+    padding-bottom: 8px;
+  }
+  table.matrix {
+    border-collapse: collapse;
+    margin: 0 auto;
+    background: var(--paper);
+  }
+  table.matrix th, table.matrix td {
+    padding: 0;
+    position: relative;
+  }
+
+  /* author header cells */
+  .auth-head {
+    vertical-align: bottom;
+    height: 150px;
+    width: 40px;
+    min-width: 40px;
+    text-align: center;
+  }
+  .auth-rot {
+    display: inline-flex;
+    justify-content: center;
+    align-items: flex-end;
+    height: 100%;
+    width: 100%;
+  }
+  .auth-rot input {
+    font-family: 'Fraunces', serif;
+    font-size: 0.82rem;
+    font-weight: 500;
+    border: none;
+    background: transparent;
+    color: var(--ink);
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    text-align: left;
+    height: 142px;
+    width: 1.6em;
+    padding: 4px 1px;
+    border-left: 1px dashed transparent;
+    text-overflow: ellipsis;
+  }
+  .auth-rot input:focus { outline: none; border-left-color: var(--accent); background: rgba(255,255,255,0.5); }
+
+  .auth-tools {
+    position: absolute;
+    top: -26px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 2px;
+    opacity: 0;
+    transition: opacity 0.12s;
+    z-index: 5;
+  }
+  .auth-head:hover .auth-tools { opacity: 1; }
+  .mini {
+    font-family: 'Spline Sans Mono', monospace;
+    font-size: 0.6rem;
+    border: 1px solid var(--rule);
+    background: var(--paper);
+    padding: 1px 4px;
+    line-height: 1.3;
+    cursor: pointer;
+    border-radius: 2px;
+  }
+  .mini:hover { background: var(--ink); color: var(--paper); }
+  .mini.x:hover { background: var(--accent); border-color: var(--accent); }
+
+  .contrib-head {
+    text-align: left;
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 0.95rem;
+    padding: 0 14px 7px 4px !important;
+    vertical-align: bottom;
+    border-bottom: 2px solid var(--rule-strong);
+    white-space: nowrap;
+  }
+  .corner-blank { border-bottom: 2px solid var(--rule-strong); }
+  .corner-input {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--ink);
+    border: none;
+    background: transparent;
+    text-align: right;
+    width: 150px;
+    padding: 2px 2px;
+    border-bottom: 1px dashed transparent;
+  }
+  .corner-input:focus { outline: none; border-bottom-color: var(--accent); background: rgba(0,0,0,0.04); }
+  .notes-head {
+    text-align: left;
+    font-family: 'Spline Sans Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    padding: 0 0 7px 12px !important;
+    vertical-align: bottom;
+    border-bottom: 2px solid var(--rule-strong);
+  }
+
+  /* row label */
+  .row-label {
+    font-family: 'Newsreader', serif;
+    font-size: 0.96rem;
+    padding: 0 14px 0 4px !important;
+    white-space: nowrap;
+    text-align: right;
+    position: relative;
+  }
+  .row-label input {
+    font: inherit;
+    border: none;
+    background: transparent;
+    color: var(--ink);
+    text-align: right;
+    width: 150px;
+    padding: 5px 2px;
+    border-bottom: 1px dashed transparent;
+  }
+  .row-label input:focus { outline: none; border-bottom-color: var(--accent); background: rgba(255,255,255,0.5); }
+
+  .row-tools {
+    position: absolute;
+    left: -4px;
+    top: 50%;
+    transform: translate(-100%, -50%);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    opacity: 0;
+    transition: opacity 0.12s;
+  }
+  tr.data-row:hover .row-tools { opacity: 1; }
+
+  /* contribution cells */
+  td.cell {
+    width: 40px;
+    min-width: 40px;
+    height: 30px;
+    cursor: pointer;
+    border: 1px solid var(--rule);
+    transition: filter 0.1s;
+  }
+  td.cell:hover { filter: brightness(0.92); outline: 2px solid var(--accent); outline-offset: -2px; }
+  td.cell .glyph {
+    display: flex; align-items: center; justify-content: center;
+    height: 100%; width: 100%;
+    font-size: 0.7rem;
+  }
+
+  /* notes cell */
+  td.notes {
+    padding: 2px 0 2px 12px !important;
+    vertical-align: middle;
+  }
+  td.notes textarea {
+    font-family: 'Newsreader', serif;
+    font-style: italic;
+    font-size: 0.9rem;
+    color: var(--ink-soft);
+    border: none;
+    background: transparent;
+    width: 100%;
+    min-width: 280px;
+    resize: none;
+    overflow: hidden;
+    padding: 4px 6px;
+    line-height: 1.35;
+    border-radius: 2px;
+  }
+  td.notes textarea:focus { outline: none; background: rgba(255,255,255,0.55); }
+  td.notes textarea::placeholder { color: var(--rule); font-style: italic; }
+
+  /* dividers */
+  tr.divider-row td {
+    height: 0;
+    padding: 0 !important;
+  }
+  .divider-strip {
+    height: 2px;
+    cursor: pointer;
+    position: relative;
+  }
+  /* invisible hit-zone extends the clickable area above/below without adding layout height */
+  .divider-strip::before {
+    content: "";
+    position: absolute;
+    left: 0; right: 0;
+    top: -5px; bottom: -5px;
+    z-index: 2;
+  }
+  .divider-strip::after {
+    content: "";
+    position: absolute;
+    left: 0; right: 0; top: 50%;
+    transform: translateY(-50%);
+    height: 1px;
+    background: var(--rule);
+    opacity: 0.4;
+    transition: all 0.12s;
+  }
+  .divider-strip:hover::after { opacity: 1; background: var(--accent); height: 2px; }
+  .divider-strip.active::after { background: var(--rule-strong); height: 2px; opacity: 1; }
+  .divider-strip.active:hover::after { background: var(--accent); }
+
+  /* vertical divider toggles live in a control strip */
+  .vdiv-row td { height: 14px; position: relative; overflow: visible; }
+  .vdiv-toggle {
+    position: absolute;
+    top: 0; bottom: 0;
+    left: 0;                     /* boundary is the LEFT edge of this cell */
+    width: 14px;
+    transform: translateX(-50%); /* straddle the boundary for easy clicking */
+    cursor: pointer;
+    z-index: 3;
+  }
+  .vdiv-toggle::after {
+    content: "";
+    position: absolute;
+    top: 0; bottom: 0; left: 50%;
+    transform: translateX(-50%);
+    width: 1px;
+    background: var(--rule);
+    opacity: 0.35;
+    transition: all 0.12s;
+  }
+  .vdiv-toggle:hover::after { opacity: 1; background: var(--accent); width: 2px; }
+  .vdiv-toggle.active::after { background: var(--rule-strong); width: 2px; opacity: 1; }
+
+  .cell.vdiv-left { border-left: 2px solid var(--rule-strong); }
+  .cell.frame-left { border-left: 2px solid var(--rule-strong); }
+  .cell.frame-right { border-right: 2px solid var(--rule-strong); }
+
+  /* ---------- Short form ---------- */
+  .shortform-section {
+    margin-top: 44px;
+    padding-top: 22px;
+    border-top: 1px solid var(--rule);
+  }
+  .shortform-title {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 1.1rem;
+    margin: 0 0 4px;
+  }
+  .shortform-sub {
+    font-size: 0.9rem;
+    color: var(--ink-soft);
+    font-style: italic;
+    margin: 0 0 14px;
+  }
+  /* rotated contribution headers (reuse auth-head look) */
+  table.shortform .sf-contrib-head {
+    vertical-align: bottom;
+    height: 150px;
+    width: 40px;
+    min-width: 40px;
+    text-align: center;
+  }
+  .sf-rot {
+    display: inline-flex;
+    justify-content: center;
+    align-items: flex-end;
+    height: 100%;
+    width: 100%;
+  }
+  .sf-rot span {
+    font-family: 'Fraunces', serif;
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: var(--ink);
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    text-align: left;
+    height: 142px;
+    padding: 4px 1px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  /* corner label, rotated like the contribution headers */
+  table.shortform .sf-corner {
+    vertical-align: bottom;
+    height: 150px;
+    text-align: center;
+    border-bottom: 2px solid var(--rule-strong);
+    padding: 0 6px 0 0 !important;
+  }
+  .sf-corner .sf-rot span {
+    font-weight: 600;
+  }
+  /* author row labels down the side */
+  table.shortform .sf-author-label {
+    font-family: 'Newsreader', serif;
+    font-size: 0.96rem;
+    padding: 0 14px 0 4px !important;
+    white-space: nowrap;
+    text-align: right;
+  }
+  /* read-only cells: no pointer, no hover affordance */
+  table.shortform td.sf-cell {
+    width: 40px;
+    min-width: 40px;
+    height: 30px;
+    border: 1px solid var(--rule);
+    cursor: default;
+  }
+  table.shortform td.sf-cell.vdiv-left { border-left: 2px solid var(--rule-strong); }
+  table.shortform tr.sf-row-divider td { border-top: 2px solid var(--rule-strong); }
+  table.shortform .sf-header-underline { border-bottom: 2px solid var(--rule-strong); }
+
+  /* ---------- Export form toggle ---------- */
+  .export-form-toggle {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 12px;
+  }
+  .export-form-toggle button.active { background: var(--ink); color: var(--paper); }
+
+  /* ---------- Legend ---------- */
+  .legend-section {
+    margin-top: 40px;
+    padding-top: 22px;
+    border-top: 1px solid var(--rule);
+  }
+  .legend-head {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 14px;
+  }
+  .legend-head h2 {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 1.1rem;
+    margin: 0;
+  }
+  .legend-items {
+    display: flex; flex-wrap: wrap; gap: 18px 26px;
+    align-items: center;
+  }
+  .legend-item { display: flex; align-items: center; gap: 9px; }
+  .swatch {
+    width: 26px; height: 22px;
+    border: 1px solid var(--rule-strong);
+    cursor: pointer;
+    position: relative;
+    flex-shrink: 0;
+  }
+  .swatch input[type=color] {
+    position: absolute; inset: 0;
+    opacity: 0; cursor: pointer; border: none; padding: 0;
+  }
+  .legend-item .lvl-num {
+    font-family: 'Spline Sans Mono', monospace;
+    font-size: 0.62rem;
+    color: var(--ink-soft);
+  }
+  .legend-item input.lbl {
+    font-family: 'Newsreader', serif;
+    font-size: 0.92rem;
+    border: none;
+    background: transparent;
+    border-bottom: 1px dashed var(--rule);
+    color: var(--ink);
+    padding: 2px 2px;
+    width: 170px;
+  }
+  .legend-item input.lbl:focus { outline: none; border-bottom-color: var(--accent); }
+
+  /* collapsible section headers */
+  .section-toggle {
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-toggle .caret {
+    font-size: 0.7em;
+    transition: transform 0.18s ease;
+    display: inline-block;
+  }
+  .section-toggle.collapsed .caret { transform: rotate(-90deg); }
+  .collapsible { overflow: hidden; }
+  .collapsible.hidden { display: none; }
+
+  /* levels stepper inside the legend header */
+  .legend-levels {
+    display: flex; align-items: center; gap: 8px;
+    margin-left: auto;
+  }
+
+  /* ---------- Export ---------- */
+  .export-section { margin-top: 40px; padding-top: 22px; border-top: 1px solid var(--rule); }
+  .export-section h2 {
+    font-family: 'Fraunces', serif; font-weight: 500; font-size: 1.1rem; margin: 0 0 14px;
+  }
+  .export-tabs { display: flex; gap: 6px; margin-bottom: 12px; }
+  .export-tabs button.active { background: var(--ink); color: var(--paper); }
+  .export-out {
+    width: 100%;
+    min-height: 200px;
+    font-family: 'Spline Sans Mono', monospace;
+    font-size: 0.76rem;
+    line-height: 1.5;
+    background: var(--ink);
+    color: #e8e2d4;
+    border: none;
+    border-radius: 3px;
+    padding: 16px;
+    resize: vertical;
+    white-space: pre;
+  }
+  .export-actions { display: flex; gap: 8px; margin-top: 10px; }
+
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: var(--ink); color: var(--paper);
+    font-family: 'Spline Sans Mono', monospace; font-size: 0.74rem;
+    padding: 10px 18px; border-radius: 3px;
+    opacity: 0; pointer-events: none; transition: all 0.25s;
+    z-index: 100;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  .hint { font-size: 0.82rem; color: var(--ink-soft); font-style: italic; margin: 8px 0 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="toolbar">
+    <div class="tool-group">
+      <span class="tool-label">Rows</span>
+      <button id="addContrib">+ Contribution</button>
+      <select id="taxonomy" title="Load a taxonomy preset">
+        <option value="" selected="selected">Load taxonomy…</option>
+        <option value="credit">CRediT (14)</option>
+        <option value="creditfair">CRediT-FAIR (18)</option>
+        <option value="calgary">Calgary (10)</option>
+      </select>
+    </div>
+    <div class="tool-group">
+      <span class="tool-label">Cols</span>
+      <button id="addAuthor">+ Author</button>
+    </div>
+    <div class="tool-group">
+      <span class="tool-label">Data</span>
+      <button id="loadDemo">Demo</button>
+      <button id="importCsv">Import CSV</button>
+      <input type="file" id="csvFile" accept=".csv,text/csv" style="display:none">
+    </div>
+    <div class="tool-group">
+      <button class="ghost danger" id="resetAll">Reset all</button>
+    </div>
+  </div>
+
+  <div class="matrix-scroll">
+    <table class="matrix" id="matrix"><thead><tr><th class="contrib-head"><input class="corner-input" value="Contribution"></th><th class="auth-head"><div class="auth-tools">
+      <span class="mini" data-act="aleft" title="Move left">‹</span>
+      <span class="mini" data-act="aright" title="Move right">›</span>
+      <span class="mini x" data-act="adel" title="Delete author">×</span></div><div class="auth-rot"><input value="Author"></div></th><th class="notes-head">Notes / Details</th></tr></thead><tbody><tr class="vdiv-row"><td></td><td><div class="vdiv-toggle" title="Toggle rule between contribution and authors"></div></td><td><div class="vdiv-toggle" title="Toggle rule between authors and notes"></div></td></tr><tr class="data-row"><td class="row-label"><div class="row-tools">
+      <span class="mini" data-act="rup" title="Move up">▲</span>
+      <span class="mini" data-act="rdn" title="Move down">▼</span>
+      <span class="mini x" data-act="rdel" title="Delete row">×</span></div><input value="Conception"></td><td class="cell" style="background: transparent;"><div class="glyph"></div></td><td class="notes"><textarea rows="1" placeholder="—" style="height: 27px;"></textarea></td></tr><tr class="divider-row"><td colspan="3"><div class="divider-strip" title="Toggle section rule"></div></td></tr><tr class="data-row"><td class="row-label"><div class="row-tools">
+      <span class="mini" data-act="rup" title="Move up">▲</span>
+      <span class="mini" data-act="rdn" title="Move down">▼</span>
+      <span class="mini x" data-act="rdel" title="Delete row">×</span></div><input value="Methodology"></td><td class="cell" style="background: transparent;"><div class="glyph"></div></td><td class="notes"><textarea rows="1" placeholder="—" style="height: 27px;"></textarea></td></tr><tr class="divider-row"><td colspan="3"><div class="divider-strip" title="Toggle section rule"></div></td></tr><tr class="data-row"><td class="row-label"><div class="row-tools">
+      <span class="mini" data-act="rup" title="Move up">▲</span>
+      <span class="mini" data-act="rdn" title="Move down">▼</span>
+      <span class="mini x" data-act="rdel" title="Delete row">×</span></div><input value="Funding"></td><td class="cell" style="background: transparent;"><div class="glyph"></div></td><td class="notes"><textarea rows="1" placeholder="—" style="height: 27px;"></textarea></td></tr><tr class="divider-row"><td colspan="3"><div class="divider-strip active" title="Toggle section rule"></div></td></tr><tr class="data-row"><td class="row-label"><div class="row-tools">
+      <span class="mini" data-act="rup" title="Move up">▲</span>
+      <span class="mini" data-act="rdn" title="Move down">▼</span>
+      <span class="mini x" data-act="rdel" title="Delete row">×</span></div><input value="Investigation"></td><td class="cell" style="background: transparent;"><div class="glyph"></div></td><td class="notes"><textarea rows="1" placeholder="—" style="height: 27px;"></textarea></td></tr><tr class="divider-row"><td colspan="3"><div class="divider-strip" title="Toggle section rule"></div></td></tr><tr class="data-row"><td class="row-label"><div class="row-tools">
+      <span class="mini" data-act="rup" title="Move up">▲</span>
+      <span class="mini" data-act="rdn" title="Move down">▼</span>
+      <span class="mini x" data-act="rdel" title="Delete row">×</span></div><input value="Development"></td><td class="cell" style="background: transparent;"><div class="glyph"></div></td><td class="notes"><textarea rows="1" placeholder="—" style="height: 27px;"></textarea></td></tr><tr class="divider-row"><td colspan="3"><div class="divider-strip" title="Toggle section rule"></div></td></tr><tr class="data-row"><td class="row-label"><div class="row-tools">
+      <span class="mini" data-act="rup" title="Move up">▲</span>
+      <span class="mini" data-act="rdn" title="Move down">▼</span>
+      <span class="mini x" data-act="rdel" title="Delete row">×</span></div><input value="Validation"></td><td class="cell" style="background: transparent;"><div class="glyph"></div></td><td class="notes"><textarea rows="1" placeholder="—" style="height: 27px;"></textarea></td></tr><tr class="divider-row"><td colspan="3"><div class="divider-strip" title="Toggle section rule"></div></td></tr><tr class="data-row"><td class="row-label"><div class="row-tools">
+      <span class="mini" data-act="rup" title="Move up">▲</span>
+      <span class="mini" data-act="rdn" title="Move down">▼</span>
+      <span class="mini x" data-act="rdel" title="Delete row">×</span></div><input value="Analysis"></td><td class="cell" style="background: transparent;"><div class="glyph"></div></td><td class="notes"><textarea rows="1" placeholder="—" style="height: 27px;"></textarea></td></tr><tr class="divider-row"><td colspan="3"><div class="divider-strip active" title="Toggle section rule"></div></td></tr><tr class="data-row"><td class="row-label"><div class="row-tools">
+      <span class="mini" data-act="rup" title="Move up">▲</span>
+      <span class="mini" data-act="rdn" title="Move down">▼</span>
+      <span class="mini x" data-act="rdel" title="Delete row">×</span></div><input value="Writing"></td><td class="cell" style="background: transparent;"><div class="glyph"></div></td><td class="notes"><textarea rows="1" placeholder="—" style="height: 27px;"></textarea></td></tr><tr class="divider-row"><td colspan="3"><div class="divider-strip" title="Toggle section rule"></div></td></tr><tr class="data-row"><td class="row-label"><div class="row-tools">
+      <span class="mini" data-act="rup" title="Move up">▲</span>
+      <span class="mini" data-act="rdn" title="Move down">▼</span>
+      <span class="mini x" data-act="rdel" title="Delete row">×</span></div><input value="Editing"></td><td class="cell" style="background: transparent;"><div class="glyph"></div></td><td class="notes"><textarea rows="1" placeholder="—" style="height: 27px;"></textarea></td></tr><tr class="divider-row"><td colspan="3"><div class="divider-strip" title="Toggle section rule"></div></td></tr><tr class="data-row"><td class="row-label"><div class="row-tools">
+      <span class="mini" data-act="rup" title="Move up">▲</span>
+      <span class="mini" data-act="rdn" title="Move down">▼</span>
+      <span class="mini x" data-act="rdel" title="Delete row">×</span></div><input value="Visuals"></td><td class="cell" style="background: transparent;"><div class="glyph"></div></td><td class="notes"><textarea rows="1" placeholder="—" style="height: 27px;"></textarea></td></tr><tr class="divider-row"><td colspan="3"><div class="divider-strip active" title="Toggle section rule"></div></td></tr></tbody></table>
+  </div>
+  <p class="hint">Tip: hover a row or column to reveal its move / delete
+ controls. Click the thin gaps between rows or columns to toggle section
+ rules.</p>
+
+  <div class="legend-section">
+    <div class="legend-head">
+      <h2>Legend</h2>
+      <button class="ghost" id="toggleLegend">Hide in export</button>
+      <div class="legend-levels">
+        <span class="tool-label">Levels</span>
+        <div class="stepper">
+          <button id="lvlMinus">−</button>
+          <span class="val" id="lvlVal">2</span>
+          <button id="lvlPlus">+</button>
+        </div>
+      </div>
+    </div>
+    <div class="legend-items" id="legendItems"><div class="legend-item"><div class="swatch" style="background: rgb(191, 191, 191);"><input type="color" value="#bfbfbf"></div><span class="lvl-num">A</span><input class="lbl" value="Supporting Contribution"></div><div class="legend-item"><div class="swatch" style="background: rgb(64, 64, 64);"><input type="color" value="#404040"></div><span class="lvl-num">B</span><input class="lbl" value="Lead Contribution"></div></div>
+  </div>
+
+  <div class="shortform-section">
+    <h2 class="shortform-title section-toggle collapsed" id="shortformToggle"><span class="caret">▾</span>Short form</h2>
+    <div class="collapsible hidden" id="shortformBody">
+      <p class="shortform-sub">A compact, transposed mirror of the matrix above (read-only). Edit using the full matrix; changes appear here live.</p>
+      <div class="matrix-scroll">
+        <table class="matrix shortform" id="matrixShort"><thead><tr><th class="sf-corner"><div class="sf-rot"><span>Contribution</span></div></th><th class="sf-contrib-head sf-header-underline"><div class="sf-rot"><span>Conception</span></div></th><th class="sf-contrib-head sf-header-underline"><div class="sf-rot"><span>Methodology</span></div></th><th class="sf-contrib-head sf-header-underline"><div class="sf-rot"><span>Funding</span></div></th><th class="sf-contrib-head sf-header-underline" style="border-left: 2px solid var(--rule-strong);"><div class="sf-rot"><span>Investigation</span></div></th><th class="sf-contrib-head sf-header-underline"><div class="sf-rot"><span>Development</span></div></th><th class="sf-contrib-head sf-header-underline"><div class="sf-rot"><span>Validation</span></div></th><th class="sf-contrib-head sf-header-underline"><div class="sf-rot"><span>Analysis</span></div></th><th class="sf-contrib-head sf-header-underline" style="border-left: 2px solid var(--rule-strong);"><div class="sf-rot"><span>Writing</span></div></th><th class="sf-contrib-head sf-header-underline"><div class="sf-rot"><span>Editing</span></div></th><th class="sf-contrib-head sf-header-underline"><div class="sf-rot"><span>Visuals</span></div></th></tr></thead><tbody><tr><td class="sf-author-label">Author</td><td class="sf-cell" style="background: transparent;"></td><td class="sf-cell" style="background: transparent;"></td><td class="sf-cell" style="background: transparent;"></td><td class="sf-cell vdiv-left" style="background: transparent;"></td><td class="sf-cell" style="background: transparent;"></td><td class="sf-cell" style="background: transparent;"></td><td class="sf-cell" style="background: transparent;"></td><td class="sf-cell vdiv-left" style="background: transparent;"></td><td class="sf-cell" style="background: transparent;"></td><td class="sf-cell" style="background: transparent;"></td></tr></tbody></table>
+      </div>
+    </div>
+  </div>
+
+  <div class="export-section">
+    <h2 class="section-toggle collapsed" id="exportToggle"><span class="caret">▾</span>Export</h2>
+    <div class="collapsible hidden" id="exportBody">
+      <div class="export-form-toggle" id="exportFormToggle">
+        <span class="tool-label">Form</span>
+        <button data-form="long" class="active">Long form</button>
+        <button data-form="short">Short form</button>
+      </div>
+      <div class="export-tabs">
+        <button data-fmt="latex" class="active">LaTeX</button>
+        <button data-fmt="csv">CSV</button>
+        <button data-fmt="text">Plain text</button>
+      </div>
+      <textarea class="export-out" id="exportOut" readonly="readonly">\newcommand{\levelA}{\cellcolor[HTML]{BFBFBF}
+	\textcolor[HTML]{BFBFBF}{$\blacksquare$}}
+\newcommand{\levelB}{\cellcolor[HTML]{404040}
+	\textcolor[HTML]{404040}{$\blacksquare$}}
+\newcommand{\authorname}[1]{\rotatebox{55}{#1}}
+
+\begin{table*}[]
+	\centering
+	\fontsize{8pt}{10pt}\selectfont
+	\setlength\tabcolsep{1.5pt}
+
+% Add a new p{} for each author
+\begin{tabular}{rp{.25cm}p{11cm}}
+
+%%% AUTHORS %%%
+\textbf{Contribution} &amp; \authorname{Author} \\
+\hline 
+
+Conception &amp;
+	 &amp;
+	\textit{}\\
+Methodology &amp;
+	 &amp;
+	\textit{}\\
+Funding &amp;
+	 &amp;
+	\textit{}\\
+\hline
+Investigation &amp;
+	 &amp;
+	\textit{}\\
+Development &amp;
+	 &amp;
+	\textit{}\\
+Validation &amp;
+	 &amp;
+	\textit{}\\
+Analysis &amp;
+	 &amp;
+	\textit{}\\
+\hline
+Writing &amp;
+	 &amp;
+	\textit{}\\
+Editing &amp;
+	 &amp;
+	\textit{}\\
+Visuals &amp;
+	 &amp;
+	\textit{}\\
+\hline
+\hline
+\end{tabular}\\[1pt]
+\begin{tabular}{p{60pt}p{8pt}p{90pt}p{8pt}p{90pt}}
+	&amp;\levelB &amp; Lead Contribution &amp;\levelA &amp; Supporting Contribution
+\end{tabular}\\[5pt]
+\end{table*}</textarea>
+      <div class="export-actions">
+        <button id="copyExport">Copy to clipboard</button>
+        <button class="ghost" id="downloadExport">Download file</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+
+/* ============================================================
+   TAXONOMIES
+   ============================================================ */
+const TAXONOMIES = {
+  credit: [
+    "Conceptualization","Data curation","Formal analysis","Funding acquisition",
+    "Investigation","Methodology","Project administration","Resources","Software",
+    "Supervision","Validation","Visualization","Writing – original draft",
+    "Writing – review & editing"
+  ],
+  creditfair: [
+    "Conceptualization","Data curation","Formal Analysis","Funding acquisition",
+    "Investigation and inquiry","Methodology","Production - Technical",
+    "Production - Creative","Production - Social","Project administration",
+    "Reflective Analysis","Relationship Development and Outreach","Resources",
+    "Supervision","Validation","Visualization","Writing – original draft",
+    "Writing – review & editing"
+  ],
+  calgary: [
+    "Conception","Methodology","Funding","Investigation","Development",
+    "Validation","Analysis","Writing","Editing","Visuals"
+  ]
+};
+// Horizontal dividers (after the named row) that ship with a preset.
+const PRESET_ROW_DIVIDERS = {
+  calgary: ["Funding","Analysis","Visuals"]
+};
+
+/* ============================================================
+   STATE  (stable IDs so reorder never desyncs cells)
+   ============================================================ */
+const LS_KEY = "contribMatrix.v1";
+let uid = 1;
+const nid = () => "id" + (uid++);
+
+let state;
+
+function demoState() {
+  const authors = [
+    { id: nid(), name: "Webbegail Vanderquack" },
+    { id: nid(), name: "Llewellyn Duck" },
+    { id: nid(), name: "Scrooge McDuck" }
+  ];
+  const mk = (name, vals, note, div) => {
+    const row = { id: nid(), name, note: note || "", divAfter: !!div, cells: {} };
+    authors.forEach((a, i) => {
+      const v = vals[i] || 0;
+      row.cells[a.id] = v > 0 ? indexToLetter(v) : 0;
+    });
+    return row;
+  };
+  const contributions = [
+    mk("Conception",   [2,1,1], ""),
+    mk("Methodology",  [2,0,0], ""),
+    mk("Funding",      [0,0,2], "SM via McDuck Enterprises.", true),
+    mk("Investigation",[2,1,1], "WV did it, LD tagged along, SM provided transport."),
+    mk("Development",  [2,0,0], ""),
+    mk("Validation",   [2,0,0], ""),
+    mk("Analysis",     [2,0,0], "", true),
+    mk("Writing",      [2,0,0], ""),
+    mk("Editing",      [2,0,2], "To be fair, LD is usually the dirtbag."),
+    mk("Visuals",      [2,0,1], "", true)
+  ];
+  return {
+    authors,
+    contributions,
+    numLevels: 2,
+    cornerLabel: "Contribution",
+    colDividers: {},          // authorId -> bool (rule to the LEFT of that column)
+    frameLeft: true,          // rule between contribution label and first author
+    frameRight: true,         // rule between last author and notes
+    legend: defaultLegend(2),
+    legendInExport: true
+  };
+}
+
+// Blank starting point: a single author column and a single contribution row.
+function emptyState() {
+  const a = { id: nid(), name: "Author" };
+  const row = { id: nid(), name: "Contribution Type", note: "", divAfter: false, cells: {} };
+  row.cells[a.id] = 0;
+  return {
+    authors: [a],
+    contributions: [row],
+    numLevels: 2,
+    cornerLabel: "Contribution",
+    colDividers: {},
+    frameLeft: false,
+    frameRight: false,
+    legend: defaultLegend(2),
+    legendInExport: true
+  };
+}
+
+function defaultLegend(n) {
+  // even white->black ramp; index 0 = blank (value 0), 1..n = levels
+  const base = { 1: "Supporting Contribution", 2: "Lead Contribution" };
+  const out = [];
+  for (let v = 1; v <= n; v++) {
+    out.push({ value: v, label: base[v] || ("Level " + v), color: rampColor(v, n) });
+  }
+  return out;
+}
+function rampColor(v, n) {
+  // Choose a black! percentage per level, then convert to the matching grey.
+  // For n=2 this yields black!25 (light) and black!75 (dark), matching the LaTeX template.
+  let pct;
+  if (n === 1) pct = 75;
+  else pct = Math.round(25 + (75 - 25) * (v - 1) / (n - 1)); // 25..75 evenly
+  return greyHex(1 - pct / 100);
+}
+function greyHex(frac) {
+  const c = Math.round(frac * 255);
+  const h = c.toString(16).padStart(2, "0");
+  return "#" + h + h + h;
+}
+
+/* ---- level letter helpers ----
+   Cells store a letter ("A","B",...) for a contribution level, or 0 (number) for none.
+   A maps to level ordinal 1, B to 2, etc. */
+function indexToLetter(i) {        // 1 -> "A", 2 -> "B"
+  return String.fromCharCode(64 + i);
+}
+function letterToIndex(L) {        // "A" -> 1; 0/"" -> 0
+  if (typeof L !== "string" || L.length !== 1) return 0;
+  const i = L.charCodeAt(0) - 64;
+  return (i >= 1 && i <= 26) ? i : 0;
+}
+function cellIndex(v) {            // normalize a stored cell value to its ordinal
+  if (typeof v === "number") return v > 0 ? v : 0;   // legacy numeric support
+  return letterToIndex(v);
+}
+
+/* ---- persistence ---- */
+function save() {
+  try { localStorage.setItem(LS_KEY, JSON.stringify({ uid, state })); } catch (e) {}
+}
+function load() {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) return false;
+    const parsed = JSON.parse(raw);
+    uid = parsed.uid || 1;
+    state = parsed.state;
+    // guard against older shapes
+    if (!state.authors || !state.contributions) return false;
+    state.colDividers = state.colDividers || {};
+    if (typeof state.legendInExport !== "boolean") state.legendInExport = true;
+    if (state.cornerLabel == null) state.cornerLabel = "Contribution";
+    if (typeof state.frameLeft !== "boolean") state.frameLeft = false;
+    if (typeof state.frameRight !== "boolean") state.frameRight = false;
+    // migrate any legacy numeric cell values to letters
+    state.contributions.forEach(r => {
+      r.cells = r.cells || {};
+      Object.keys(r.cells).forEach(k => {
+        const idx = cellIndex(r.cells[k]);
+        r.cells[k] = idx > 0 ? indexToLetter(idx) : 0;
+      });
+    });
+    return true;
+  } catch (e) { return false; }
+}
+
+/* ============================================================
+   RENDER
+   ============================================================ */
+const $ = sel => document.querySelector(sel);
+const matrixEl = $("#matrix");
+const matrixShortEl = $("#matrixShort");
+
+function render() {
+  renderMatrix();
+  renderShortMatrix();
+  renderLegend();
+  $("#lvlVal").textContent = state.numLevels;
+  $("#toggleLegend").textContent = state.legendInExport ? "Hide in export" : "Show in export";
+  renderExport();
+  save();
+}
+
+function colorForValue(v) {
+  const idx = cellIndex(v);
+  if (idx <= 0) return "transparent";
+  const item = state.legend.find(l => l.value === idx);
+  return item ? item.color : "transparent";
+}
+function isDark(hex) {
+  const c = hex.replace("#","");
+  if (c.length !== 6) return false;
+  const r = parseInt(c.slice(0,2),16), g = parseInt(c.slice(2,4),16), b = parseInt(c.slice(4,6),16);
+  return (0.299*r + 0.587*g + 0.114*b) < 140;
+}
+
+function renderMatrix() {
+  matrixEl.innerHTML = "";
+  const authors = state.authors;
+
+  // --- header row ---
+  const thead = document.createElement("thead");
+  const hr = document.createElement("tr");
+
+  const corner = document.createElement("th");
+  corner.className = "contrib-head";
+  const cornerInp = document.createElement("input");
+  cornerInp.className = "corner-input";
+  cornerInp.value = state.cornerLabel != null ? state.cornerLabel : "Contribution";
+  cornerInp.addEventListener("input", () => { state.cornerLabel = cornerInp.value; save(); renderShortMatrix(); renderExport(); });
+  corner.appendChild(cornerInp);
+  hr.appendChild(corner);
+
+  authors.forEach((a, i) => {
+    const th = document.createElement("th");
+    th.className = "auth-head" + (state.colDividers[a.id] ? " " : "");
+    const tools = document.createElement("div");
+    tools.className = "auth-tools";
+    tools.innerHTML = `
+      <span class="mini" data-act="aleft" title="Move left">‹</span>
+      <span class="mini" data-act="aright" title="Move right">›</span>
+      <span class="mini x" data-act="adel" title="Delete author">×</span>`;
+    tools.querySelectorAll(".mini").forEach(m => {
+      m.addEventListener("click", () => {
+        const act = m.dataset.act;
+        if (act === "aleft") moveAuthor(i, -1);
+        if (act === "aright") moveAuthor(i, 1);
+        if (act === "adel") delAuthor(i);
+      });
+    });
+    th.appendChild(tools);
+
+    const rot = document.createElement("div");
+    rot.className = "auth-rot";
+    const inp = document.createElement("input");
+    inp.value = a.name;
+    inp.addEventListener("input", () => { a.name = inp.value; save(); renderShortMatrix(); renderExport(); });
+    rot.appendChild(inp);
+    th.appendChild(rot);
+    hr.appendChild(th);
+  });
+
+  const notesTh = document.createElement("th");
+  notesTh.className = "notes-head";
+  notesTh.textContent = "Notes / Details";
+  hr.appendChild(notesTh);
+  thead.appendChild(hr);
+  matrixEl.appendChild(thead);
+
+  // --- vertical-divider control strip ---
+  const vbody = document.createElement("tbody");
+  const vrow = document.createElement("tr");
+  vrow.className = "vdiv-row";
+  vrow.appendChild(document.createElement("td")); // under contribution label
+  authors.forEach((a, i) => {
+    const td = document.createElement("td");
+    if (i === 0) {
+      // frame-left: boundary between contribution label and the first author
+      const tg = document.createElement("div");
+      tg.className = "vdiv-toggle" + (state.frameLeft ? " active" : "");
+      tg.title = "Toggle rule between contribution and authors";
+      tg.addEventListener("click", () => { state.frameLeft = !state.frameLeft; render(); });
+      td.appendChild(tg);
+    } else {  // divider sits to the LEFT of column i
+      const tg = document.createElement("div");
+      tg.className = "vdiv-toggle" + (state.colDividers[a.id] ? " active" : "");
+      tg.title = "Toggle vertical rule";
+      tg.addEventListener("click", () => {
+        state.colDividers[a.id] = !state.colDividers[a.id];
+        render();
+      });
+      td.appendChild(tg);
+    }
+    vrow.appendChild(td);
+  });
+  const notesToggleTd = document.createElement("td");
+  // frame-right: boundary between the last author and notes (left edge of notes column)
+  const frTg = document.createElement("div");
+  frTg.className = "vdiv-toggle" + (state.frameRight ? " active" : "");
+  frTg.title = "Toggle rule between authors and notes";
+  frTg.addEventListener("click", () => { state.frameRight = !state.frameRight; render(); });
+  notesToggleTd.appendChild(frTg);
+  vrow.appendChild(notesToggleTd);
+  vbody.appendChild(vrow);
+
+  // --- data rows ---
+  state.contributions.forEach((row, ri) => {
+    const tr = document.createElement("tr");
+    tr.className = "data-row";
+
+    // label
+    const labelTd = document.createElement("td");
+    labelTd.className = "row-label";
+    const tools = document.createElement("div");
+    tools.className = "row-tools";
+    tools.innerHTML = `
+      <span class="mini" data-act="rup" title="Move up">▲</span>
+      <span class="mini" data-act="rdn" title="Move down">▼</span>
+      <span class="mini x" data-act="rdel" title="Delete row">×</span>`;
+    tools.querySelectorAll(".mini").forEach(m => {
+      m.addEventListener("click", () => {
+        const act = m.dataset.act;
+        if (act === "rup") moveRow(ri, -1);
+        if (act === "rdn") moveRow(ri, 1);
+        if (act === "rdel") delRow(ri);
+      });
+    });
+    labelTd.appendChild(tools);
+    const linp = document.createElement("input");
+    linp.value = row.name;
+    linp.addEventListener("input", () => { row.name = linp.value; save(); renderShortMatrix(); renderExport(); });
+    labelTd.appendChild(linp);
+    tr.appendChild(labelTd);
+
+    // cells
+    state.authors.forEach((a, ci) => {
+      const td = document.createElement("td");
+      let cls = "cell";
+      if (ci === 0 && state.frameLeft) cls += " frame-left";
+      if (ci > 0 && state.colDividers[a.id]) cls += " vdiv-left";
+      if (ci === state.authors.length - 1 && state.frameRight) cls += " frame-right";
+      td.className = cls;
+      const v = row.cells[a.id] || 0;
+      td.style.background = colorForValue(v);
+      const glyph = document.createElement("div");
+      glyph.className = "glyph";
+      td.appendChild(glyph);
+      td.addEventListener("click", () => {
+        let next = cellIndex(row.cells[a.id]) + 1;
+        if (next > state.numLevels) next = 0;
+        row.cells[a.id] = next > 0 ? indexToLetter(next) : 0;
+        render();
+      });
+      tr.appendChild(td);
+    });
+
+    // notes
+    const ntd = document.createElement("td");
+    ntd.className = "notes";
+    const ta = document.createElement("textarea");
+    ta.rows = 1;
+    ta.value = row.note;
+    ta.placeholder = "—";
+    const autosize = () => { ta.style.height = "auto"; ta.style.height = ta.scrollHeight + "px"; };
+    ta.addEventListener("input", () => { row.note = ta.value; autosize(); save(); renderExport(); });
+    ntd.appendChild(ta);
+    tr.appendChild(ntd);
+    vbody.appendChild(tr);
+    setTimeout(autosize, 0);
+
+    // horizontal divider strip after this row
+    const dr = document.createElement("tr");
+    dr.className = "divider-row";
+    const dtd = document.createElement("td");
+    dtd.colSpan = state.authors.length + 2;
+    const strip = document.createElement("div");
+    strip.className = "divider-strip" + (row.divAfter ? " active" : "");
+    strip.title = "Toggle section rule";
+    strip.addEventListener("click", () => { row.divAfter = !row.divAfter; render(); });
+    dtd.appendChild(strip);
+    dr.appendChild(dtd);
+    vbody.appendChild(dr);
+  });
+
+  matrixEl.appendChild(vbody);
+}
+
+function renderShortMatrix() {
+  matrixShortEl.innerHTML = "";
+  const authors = state.authors;
+  const contribs = state.contributions;
+  const cornerLabel = state.cornerLabel != null ? state.cornerLabel : "Contribution";
+
+  // --- header row: rotated corner label + rotated contribution names ---
+  const thead = document.createElement("thead");
+  const hr = document.createElement("tr");
+
+  const corner = document.createElement("th");
+  corner.className = "sf-corner";
+  const cRot = document.createElement("div");
+  cRot.className = "sf-rot";
+  const cSpan = document.createElement("span");
+  cSpan.textContent = cornerLabel;
+  cRot.appendChild(cSpan);
+  corner.appendChild(cRot);
+  hr.appendChild(corner);
+
+  contribs.forEach((c, ci) => {
+    const th = document.createElement("th");
+    th.className = "sf-contrib-head sf-header-underline";
+    // a contribution divider (divAfter) becomes a vertical rule to the LEFT of the NEXT column
+    if (ci > 0 && contribs[ci - 1].divAfter) th.style.borderLeft = "2px solid var(--rule-strong)";
+    const rot = document.createElement("div");
+    rot.className = "sf-rot";
+    const sp = document.createElement("span");
+    sp.textContent = c.name;
+    rot.appendChild(sp);
+    th.appendChild(rot);
+    hr.appendChild(th);
+  });
+  thead.appendChild(hr);
+  matrixShortEl.appendChild(thead);
+
+  // --- body: one row per author ---
+  const tbody = document.createElement("tbody");
+  authors.forEach((a, ai) => {
+    const tr = document.createElement("tr");
+    // an author divider (colDividers, was a vertical rule) becomes a horizontal rule
+    // above this author row (dividers sit to the LEFT of a column == above a row here)
+    if (ai > 0 && state.colDividers[a.id]) {
+      tr.style.borderTop = "2px solid var(--rule-strong)";
+      // apply to cells via class so the border renders on collapsed table
+      tr.classList.add("sf-row-divider");
+    }
+
+    const labelTd = document.createElement("td");
+    labelTd.className = "sf-author-label";
+    labelTd.textContent = a.name;
+    tr.appendChild(labelTd);
+
+    contribs.forEach((c, ci) => {
+      const td = document.createElement("td");
+      let cls = "sf-cell";
+      if (ci > 0 && contribs[ci - 1].divAfter) cls += " vdiv-left";
+      td.className = cls;
+      td.style.background = colorForValue(c.cells[a.id]);
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+  matrixShortEl.appendChild(tbody);
+}
+
+function renderLegend() {
+  const wrap = $("#legendItems");
+  wrap.innerHTML = "";
+  state.legend.forEach(item => {
+    const div = document.createElement("div");
+    div.className = "legend-item";
+    const sw = document.createElement("div");
+    sw.className = "swatch";
+    sw.style.background = item.color;
+    const ci = document.createElement("input");
+    ci.type = "color";
+    ci.value = item.color;
+    ci.addEventListener("input", () => { item.color = ci.value; render(); });
+    sw.appendChild(ci);
+    div.appendChild(sw);
+    const num = document.createElement("span");
+    num.className = "lvl-num";
+    num.textContent = indexToLetter(item.value);
+    div.appendChild(num);
+    const lbl = document.createElement("input");
+    lbl.className = "lbl";
+    lbl.value = item.label;
+    lbl.addEventListener("input", () => { item.label = lbl.value; save(); renderExport(); });
+    div.appendChild(lbl);
+    wrap.appendChild(div);
+  });
+}
+
+/* ============================================================
+   MUTATIONS
+   ============================================================ */
+function moveAuthor(i, dir) {
+  const j = i + dir;
+  if (j < 0 || j >= state.authors.length) return;
+  [state.authors[i], state.authors[j]] = [state.authors[j], state.authors[i]];
+  render();
+}
+function delAuthor(i) {
+  if (state.authors.length <= 1) { toast("Need at least one author."); return; }
+  const a = state.authors[i];
+  state.authors.splice(i, 1);
+  delete state.colDividers[a.id];
+  state.contributions.forEach(r => delete r.cells[a.id]);
+  render();
+}
+function addAuthor() {
+  const a = { id: nid(), name: "New Author" };
+  state.authors.push(a);
+  state.contributions.forEach(r => { r.cells[a.id] = 0; });
+  render();
+}
+function moveRow(i, dir) {
+  const j = i + dir;
+  if (j < 0 || j >= state.contributions.length) return;
+  [state.contributions[i], state.contributions[j]] = [state.contributions[j], state.contributions[i]];
+  render();
+}
+function delRow(i) {
+  if (state.contributions.length <= 1) { toast("Need at least one contribution."); return; }
+  state.contributions.splice(i, 1);
+  render();
+}
+function addContrib() {
+  const row = { id: nid(), name: "New Contribution", note: "", divAfter: false, cells: {} };
+  state.authors.forEach(a => { row.cells[a.id] = 0; });
+  state.contributions.push(row);
+  render();
+}
+
+function loadTaxonomy(key) {
+  if (!TAXONOMIES[key]) return;
+  const replace = state.contributions.length === 0 ||
+    confirm("Replace the current contribution rows with the " +
+            key.toUpperCase() + " taxonomy?\n(Cancel to append instead.)");
+  const divs = PRESET_ROW_DIVIDERS[key] || [];
+  const newRows = TAXONOMIES[key].map(name => {
+    const row = { id: nid(), name, note: "", divAfter: divs.includes(name), cells: {} };
+    state.authors.forEach(a => { row.cells[a.id] = 0; });
+    return row;
+  });
+  if (replace) state.contributions = newRows;
+  else state.contributions = state.contributions.concat(newRows);
+  render();
+}
+
+function changeLevels(dir) {
+  const n = state.numLevels + dir;
+  if (n < 1 || n > 5) return;
+  if (n < state.numLevels) {
+    // would any cell be clamped?
+    let lost = false;
+    state.contributions.forEach(r => state.authors.forEach(a => {
+      if (cellIndex(r.cells[a.id]) > n) lost = true;
+    }));
+    if (lost && !confirm("Reducing to " + n + " level(s) will clamp any higher cell values and drop the top legend entry. Continue?")) return;
+    state.contributions.forEach(r => state.authors.forEach(a => {
+      if (cellIndex(r.cells[a.id]) > n) r.cells[a.id] = indexToLetter(n);
+    }));
+  }
+  // rebuild legend preserving existing labels/colors where possible
+  const old = state.legend;
+  const next = [];
+  for (let v = 1; v <= n; v++) {
+    const prev = old.find(l => l.value === v);
+    next.push(prev ? prev : { value: v, label: "Level " + v, color: rampColor(v, n) });
+  }
+  state.numLevels = n;
+  state.legend = next;
+  render();
+}
+
+/* ============================================================
+   EXPORT
+   ============================================================ */
+let currentFmt = "latex";
+let currentForm = "long";
+
+function renderExport() {
+  let out = "";
+  if (currentForm === "short") {
+    if (currentFmt === "latex") out = toLaTeXShort();
+    else if (currentFmt === "csv") out = toCSVShort();
+    else out = toTextShort();
+  } else {
+    if (currentFmt === "latex") out = toLaTeX();
+    else if (currentFmt === "csv") out = toCSV();
+    else out = toText();
+  }
+  $("#exportOut").value = out;
+}
+
+function csvEscape(s) {
+  s = (s == null ? "" : String(s));
+  if (/[",\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+  return s;
+}
+function toCSV() {
+  const rows = [];
+  const cornerLabel = state.cornerLabel != null ? state.cornerLabel : "Contribution";
+  const header = [cornerLabel, ...state.authors.map(a => a.name), "Notes"];
+  rows.push(header.map(csvEscape).join(","));
+  state.contributions.forEach(r => {
+    const line = [r.name, ...state.authors.map(a => {
+      const idx = cellIndex(r.cells[a.id]);
+      return idx > 0 ? indexToLetter(idx) : "";
+    }), r.note];
+    rows.push(line.map(csvEscape).join(","));
+  });
+  if (state.legendInExport) {
+    rows.push("");
+    rows.push(["Legend", "Label", "Color"].map(csvEscape).join(","));
+    state.legend.forEach(l => rows.push([indexToLetter(l.value), l.label, l.color].map(csvEscape).join(",")));
+  }
+  return rows.join("\n");
+}
+
+/* ---- CSV import (mirrors toCSV format) ---- */
+function parseCSV(text) {
+  // returns array of rows, each an array of field strings
+  const rows = [];
+  let field = "", row = [], inQ = false;
+  text = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQ) {
+      if (c === '"') {
+        if (text[i+1] === '"') { field += '"'; i++; }
+        else inQ = false;
+      } else field += c;
+    } else {
+      if (c === '"') inQ = true;
+      else if (c === ",") { row.push(field); field = ""; }
+      else if (c === "\n") { row.push(field); rows.push(row); row = []; field = ""; }
+      else field += c;
+    }
+  }
+  row.push(field);
+  rows.push(row);
+  return rows;
+}
+
+function importCSV(text) {
+  let rows;
+  try { rows = parseCSV(text); } catch (e) { toast("Could not parse CSV"); return; }
+  // drop fully-empty trailing rows
+  while (rows.length && rows[rows.length-1].every(c => c.trim() === "")) rows.pop();
+  if (rows.length < 2) { toast("CSV has no data rows"); return; }
+
+  // locate the legend section (a row whose first cell is exactly "Legend")
+  let legendStart = -1;
+  for (let i = 1; i < rows.length; i++) {
+    if (rows[i].length && rows[i][0].trim().toLowerCase() === "legend") { legendStart = i; break; }
+  }
+  const dataEnd = legendStart === -1 ? rows.length : legendStart;
+
+  const header = rows[0].map(h => h.trim());
+  if (header.length < 2) { toast("Unexpected CSV header"); return; }
+  // last column is Notes if it reads like it; otherwise treat all middle cols as authors
+  const hasNotes = header[header.length-1].trim().toLowerCase() === "notes";
+  const authorNames = header.slice(1, hasNotes ? header.length - 1 : header.length);
+  if (authorNames.length === 0) { toast("No author columns found in CSV"); return; }
+  const cornerLabel = header[0] || "Contribution";
+
+  // build fresh authors
+  const newAuthors = authorNames.map(n => ({ id: nid(), name: n || "Author" }));
+
+  // interpret a cell token: letter (A,B,...) or legacy number, -> ordinal index
+  const tokenToIndex = raw => {
+    raw = (raw || "").trim();
+    if (raw === "" || raw === "0") return 0;
+    if (/^[A-Za-z]$/.test(raw)) return letterToIndex(raw.toUpperCase());
+    const n = parseInt(raw, 10);
+    return (Number.isFinite(n) && n > 0) ? n : 0;
+  };
+
+  // data rows
+  const newContribs = [];
+  let maxLevel = 1;
+  for (let i = 1; i < dataEnd; i++) {
+    const r = rows[i];
+    if (!r.length || r.every(c => c.trim() === "")) continue;
+    const name = (r[0] || "").trim();
+    const note = hasNotes ? (r[r.length-1] || "") : "";
+    const row = { id: nid(), name, note, divAfter: false, cells: {} };
+    newAuthors.forEach((a, ci) => {
+      const idx = tokenToIndex(r[1 + ci]);
+      row.cells[a.id] = idx > 0 ? indexToLetter(idx) : 0;
+      if (idx > maxLevel) maxLevel = idx;
+    });
+    newContribs.push(row);
+  }
+  if (newContribs.length === 0) { toast("No contribution rows found"); return; }
+
+  // legend (optional)
+  let newLevels = Math.min(5, Math.max(1, maxLevel));
+  let newLegend = null;
+  if (legendStart !== -1) {
+    const parsed = [];
+    for (let i = legendStart + 1; i < rows.length; i++) {
+      const r = rows[i];
+      if (!r.length || r[0].trim() === "") continue;
+      const val = tokenToIndex(r[0]);   // letter or number key
+      if (val < 1) continue;
+      let color = (r[2] || "").trim();
+      if (!/^#[0-9a-fA-F]{6}$/.test(color)) color = null;  // ignore malformed
+      parsed.push({ value: val, label: (r[1] || "").trim(), color });
+    }
+    if (parsed.length) {
+      newLevels = Math.min(5, Math.max(newLevels, ...parsed.map(p => p.value)));
+      newLegend = [];
+      for (let v = 1; v <= newLevels; v++) {
+        const found = parsed.find(p => p.value === v);
+        newLegend.push({
+          value: v,
+          label: found ? found.label : ("Level " + v),
+          color: (found && found.color) ? found.color : rampColor(v, newLevels)
+        });
+      }
+    }
+  }
+  if (!newLegend) newLegend = defaultLegend(newLevels);
+
+  // clamp any cell above newLevels
+  newContribs.forEach(r => newAuthors.forEach(a => {
+    if (cellIndex(r.cells[a.id]) > newLevels) r.cells[a.id] = indexToLetter(newLevels);
+  }));
+
+  state.authors = newAuthors;
+  state.contributions = newContribs;
+  state.numLevels = newLevels;
+  state.legend = newLegend;
+  state.colDividers = {};
+  state.cornerLabel = cornerLabel;
+  render();
+  toast("Imported " + newContribs.length + " rows, " + newAuthors.length + " authors");
+}
+
+function toText() {
+  // padded fixed-width table
+  const cornerLabel = state.cornerLabel != null ? state.cornerLabel : "Contribution";
+  const labelW = Math.max(12, ...state.contributions.map(r => r.name.length), cornerLabel.length);
+  const colW = Math.max(3, ...state.authors.map(a => a.name.length));
+  const pad = (s, w) => String(s).padEnd(w);
+  const cellTok = a => { const i = cellIndex(a); return i > 0 ? indexToLetter(i) : ""; };
+  const lines = [];
+  let head = pad(cornerLabel, labelW) + " | " +
+    state.authors.map(a => pad(a.name, colW)).join(" | ") + " | Notes";
+  lines.push(head);
+  lines.push("-".repeat(head.length));
+  state.contributions.forEach(r => {
+    const cells = state.authors.map(a => pad(cellTok(r.cells[a.id]), colW));
+    lines.push(pad(r.name, labelW) + " | " + cells.join(" | ") + " | " + r.note);
+    if (r.divAfter) lines.push("-".repeat(head.length));
+  });
+  if (state.legendInExport) {
+    lines.push("");
+    lines.push("Legend:");
+    state.legend.forEach(l => lines.push("  " + indexToLetter(l.value) + " = " + l.label));
+  }
+  return lines.join("\n");
+}
+
+/* ---- LaTeX: faithful to the supplied template ---- */
+function latexEscape(s) {
+  return String(s == null ? "" : s)
+    .replace(/\\/g, "\\textbackslash{}")
+    .replace(/([&%$#_{}])/g, "\\$1")
+    .replace(/~/g, "\\textasciitilde{}")
+    .replace(/\^/g, "\\textasciicircum{}");
+}
+
+// Normalize a legend hex (#rrggbb) into an uppercase RRGGBB string for LaTeX \cellcolor[HTML]{}
+function hexForLatex(hex) {
+  const c = String(hex || "").replace("#", "");
+  return /^[0-9a-fA-F]{6}$/.test(c) ? c.toUpperCase() : "808080";
+}
+// Perceived luminance 0(black)..255(white) — used to pick a contrasting glyph color
+function hexLuminance(hex) {
+  const c = String(hex || "").replace("#", "");
+  if (c.length !== 6) return 128;
+  const r = parseInt(c.slice(0,2),16), g = parseInt(c.slice(2,4),16), b = parseInt(c.slice(4,6),16);
+  return 0.299*r + 0.587*g + 0.114*b;
+}
+
+function levelMacros() {
+  const n = state.numLevels;
+  // returns { value: {macro, name, hex} } where hex is the legend color (RRGGBB, no #)
+  const map = {};
+  const hexFor = v => {
+    const item = state.legend.find(l => l.value === v);
+    return hexForLatex(item ? item.color : "#808080");
+  };
+  for (let v = 1; v <= n; v++) {
+    const letter = indexToLetter(v);
+    map[v] = { macro: "\\level" + letter, name: "level" + letter, hex: hexFor(v) };
+  }
+  return map;
+}
+
+function toLaTeX() {
+  const macros = levelMacros();
+  const authors = state.authors;
+  const L = [];
+
+  // preamble macros — full RGB via \cellcolor[HTML]{...}
+  const defined = Object.values(macros);
+  defined.forEach(m => {
+    L.push("\\newcommand{" + m.macro + "}{\\cellcolor[HTML]{" + m.hex + "}");
+    L.push("\t\\textcolor[HTML]{" + m.hex + "}{$\\blacksquare$}}");
+  });
+  L.push("\\newcommand{\\authorname}[1]{\\rotatebox{55}{#1}}");
+  L.push("");
+
+  // column spec: r + per-author p{.25cm} + notes. Vertical dividers are NOT placed
+  // here (a | in the spec would run through the rotated header); they are drawn per
+  // body cell via \multicolumn so they stop below the header row.
+  let colspec = "r";
+  authors.forEach(() => { colspec += "p{.25cm}"; });
+  colspec += "p{11cm}";
+
+  L.push("\\begin{table*}[]");
+  L.push("\t\\centering");
+  L.push("\t\\fontsize{8pt}{10pt}\\selectfont");
+  L.push("\t\\setlength\\tabcolsep{1.5pt}");
+  L.push("");
+  L.push("% Add a new p{} for each author");
+  L.push("\\begin{tabular}{" + colspec + "}");
+  L.push("");
+
+  // author header
+  L.push("%%% AUTHORS %%%");
+  const cornerLabel = state.cornerLabel != null ? state.cornerLabel : "Contribution";
+  let hline = "\\textbf{" + latexEscape(cornerLabel) + "} & ";
+  hline += authors.map(a => "\\authorname{" + latexEscape(a.name) + "}").join(" & ");
+  hline += " \\\\";
+  L.push(hline);
+  L.push("\\hline ");
+  L.push("");
+
+  // body
+  state.contributions.forEach((r) => {
+    L.push(latexEscape(r.name) + " &");
+    authors.forEach((a, i) => {
+      const idx = cellIndex(r.cells[a.id]);
+      const macro = idx > 0 && macros[idx] ? macros[idx].macro : "";
+      // Body-only rules via \multicolumn so they stop below the rotated header:
+      //  - left rule before the first author (contribution|authors boundary) or an interior divider
+      //  - right rule after the last author (authors|notes boundary)
+      const leftRule = (i === 0 && state.frameLeft) || (i > 0 && state.colDividers[a.id]);
+      const rightRule = (i === authors.length - 1 && state.frameRight);
+      const cell = (leftRule || rightRule)
+        ? "\\multicolumn{1}{" + (leftRule ? "|" : "") + "p{.25cm}" + (rightRule ? "|" : "") + "}{" + macro + "}"
+        : macro;
+      L.push("\t" + cell + " &");
+    });
+    L.push("\t\\textit{" + latexEscape(r.note) + "}\\\\");
+    if (r.divAfter) L.push("\\hline");
+  });
+  L.push("\\hline");
+  L.push("\\end{tabular}\\\\[1pt]");
+
+  // legend tabular
+  if (state.legendInExport) {
+    const legendOrdered = state.legend.slice().sort((a,b) => b.value - a.value);
+    const segs = legendOrdered.map(l => "p{8pt}p{90pt}");
+    L.push("\\begin{tabular}{p{60pt}" + segs.join("") + "}");
+    let line = "\t";
+    legendOrdered.forEach(l => {
+      const m = macros[l.value];
+      line += "&" + (m ? m.macro : "") + " & " + latexEscape(l.label) + " ";
+    });
+    L.push(line.replace(/\s+$/,""));
+    L.push("\\end{tabular}\\\\[5pt]");
+  }
+
+  L.push("\\end{table*}");
+
+  return L.join("\n");
+}
+
+/* ---- Short-form (transposed) exports: authors as rows, contributions as columns, no notes ---- */
+function toCSVShort() {
+  const rows = [];
+  const cornerLabel = state.cornerLabel != null ? state.cornerLabel : "Contribution";
+  const header = [cornerLabel, ...state.contributions.map(c => c.name)];
+  rows.push(header.map(csvEscape).join(","));
+  state.authors.forEach(a => {
+    const line = [a.name, ...state.contributions.map(c => {
+      const idx = cellIndex(c.cells[a.id]);
+      return idx > 0 ? indexToLetter(idx) : "";
+    })];
+    rows.push(line.map(csvEscape).join(","));
+  });
+  if (state.legendInExport) {
+    rows.push("");
+    rows.push(["Legend", "Label", "Color"].map(csvEscape).join(","));
+    state.legend.forEach(l => rows.push([indexToLetter(l.value), l.label, l.color].map(csvEscape).join(",")));
+  }
+  return rows.join("\n");
+}
+
+function toTextShort() {
+  const cornerLabel = state.cornerLabel != null ? state.cornerLabel : "Contribution";
+  const labelW = Math.max(12, ...state.authors.map(a => a.name.length), cornerLabel.length);
+  const colW = Math.max(3, ...state.contributions.map(c => c.name.length));
+  const pad = (s, w) => String(s).padEnd(w);
+  const cellTok = v => { const i = cellIndex(v); return i > 0 ? indexToLetter(i) : ""; };
+  const lines = [];
+  const head = pad(cornerLabel, labelW) + " | " +
+    state.contributions.map(c => pad(c.name, colW)).join(" | ");
+  lines.push(head);
+  lines.push("-".repeat(head.length));
+  state.authors.forEach((a, ai) => {
+    if (ai > 0 && state.colDividers[a.id]) lines.push("-".repeat(head.length));
+    const cells = state.contributions.map(c => pad(cellTok(c.cells[a.id]), colW));
+    lines.push(pad(a.name, labelW) + " | " + cells.join(" | "));
+  });
+  if (state.legendInExport) {
+    lines.push("");
+    lines.push("Legend:");
+    state.legend.forEach(l => lines.push("  " + indexToLetter(l.value) + " = " + l.label));
+  }
+  return lines.join("\n");
+}
+
+function toLaTeXShort() {
+  const macros = levelMacros();
+  const contribs = state.contributions;
+  const L = [];
+
+  // preamble macros
+  const defined = Object.values(macros);
+  defined.forEach(m => {
+    L.push("\\newcommand{" + m.macro + "}{\\cellcolor[HTML]{" + m.hex + "}");
+    L.push("\t\\textcolor[HTML]{" + m.hex + "}{$\\blacksquare$}}");
+  });
+  L.push("\\newcommand{\\contribname}[1]{\\rotatebox{55}{#1}}");
+  L.push("");
+
+  // column spec: r + per-contribution p{.25cm}. Vertical dividers are NOT placed here
+  // (a | would run through the rotated header); they are drawn per body cell via
+  // \multicolumn so they stop below the header row.
+  let colspec = "r";
+  contribs.forEach(() => { colspec += "p{.25cm}"; });
+
+  L.push("\\begin{table}[]");
+  L.push("\t\\centering");
+  L.push("\t\\fontsize{8pt}{10pt}\\selectfont");
+  L.push("\t\\setlength\\tabcolsep{1.5pt}");
+  L.push("");
+  L.push("% Add a new p{} for each contribution");
+  L.push("\\begin{tabular}{" + colspec + "}");
+  L.push("");
+
+  // contribution header — corner label rotated to align with the contribution headers
+  L.push("%%% CONTRIBUTIONS %%%");
+  const cornerLabel = state.cornerLabel != null ? state.cornerLabel : "Contribution";
+  let hline = "\\contribname{\\textbf{" + latexEscape(cornerLabel) + "}} & ";
+  hline += contribs.map(c => "\\contribname{" + latexEscape(c.name) + "}").join(" & ");
+  hline += " \\\\";
+  L.push(hline);
+  L.push("\\hline ");
+  L.push("");
+
+  // body: one row per author; an author colDivider -> \hline above that author row
+  state.authors.forEach((a, ai) => {
+    if (ai > 0 && state.colDividers[a.id]) L.push("\\hline");
+    L.push(latexEscape(a.name) + " &");
+    contribs.forEach((c, i) => {
+      const idx = cellIndex(c.cells[a.id]);
+      const macro = idx > 0 && macros[idx] ? macros[idx].macro : "";
+      // a contribution divider (prev contrib's divAfter) -> body-only left rule
+      const needsRule = i > 0 && contribs[i - 1].divAfter;
+      const cell = needsRule ? "\\multicolumn{1}{|p{.25cm}}{" + macro + "}" : macro;
+      const tail = i === contribs.length - 1 ? "\\\\" : "&";
+      L.push("\t" + cell + " " + tail);
+    });
+  });
+  L.push("\\hline");
+  L.push("\\end{tabular}\\\\[1pt]");
+
+  // shared legend tabular
+  if (state.legendInExport) {
+    const legendOrdered = state.legend.slice().sort((a,b) => b.value - a.value);
+    const segs = legendOrdered.map(l => "p{8pt}p{90pt}");
+    L.push("\\begin{tabular}{p{60pt}" + segs.join("") + "}");
+    let line = "\t";
+    legendOrdered.forEach(l => {
+      const m = macros[l.value];
+      line += "&" + (m ? m.macro : "") + " & " + latexEscape(l.label) + " ";
+    });
+    L.push(line.replace(/\s+$/,""));
+    L.push("\\end{tabular}\\\\[5pt]");
+  }
+
+  L.push("\\end{table}");
+
+  return L.join("\n");
+}
+
+$("#addAuthor").addEventListener("click", addAuthor);
+$("#addContrib").addEventListener("click", addContrib);
+$("#lvlPlus").addEventListener("click", () => changeLevels(1));
+$("#lvlMinus").addEventListener("click", () => changeLevels(-1));
+
+function wireCollapse(toggleId, bodyId) {
+  const toggle = $("#" + toggleId);
+  const body = $("#" + bodyId);
+  toggle.addEventListener("click", () => {
+    const collapsed = body.classList.toggle("hidden");
+    toggle.classList.toggle("collapsed", collapsed);
+  });
+}
+wireCollapse("shortformToggle", "shortformBody");
+wireCollapse("exportToggle", "exportBody");
+
+$("#taxonomy").addEventListener("change", e => {
+  const v = e.target.value;
+  e.target.value = "";
+  if (v) loadTaxonomy(v);
+});
+let resetArmed = false;
+let resetTimer;
+const resetBtn = $("#resetAll");
+resetBtn.addEventListener("click", () => {
+  if (!resetArmed) {
+    resetArmed = true;
+    resetBtn.textContent = "Click again to confirm";
+    resetBtn.classList.add("armed");
+    clearTimeout(resetTimer);
+    resetTimer = setTimeout(() => {
+      resetArmed = false;
+      resetBtn.textContent = "Reset all";
+      resetBtn.classList.remove("armed");
+    }, 3000);
+    return;
+  }
+  clearTimeout(resetTimer);
+  resetArmed = false;
+  resetBtn.textContent = "Reset all";
+  resetBtn.classList.remove("armed");
+  try { localStorage.removeItem(LS_KEY); } catch (e) {}
+  uid = 1;
+  state = emptyState();
+  render();
+  toast("Cleared");
+});
+$("#loadDemo").addEventListener("click", () => {
+  uid = 1;
+  state = demoState();
+  render();
+  toast("Loaded demo");
+});
+$("#importCsv").addEventListener("click", () => $("#csvFile").click());
+$("#csvFile").addEventListener("change", e => {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => importCSV(String(reader.result));
+  reader.onerror = () => toast("Could not read file");
+  reader.readAsText(file);
+  e.target.value = "";  // allow re-importing the same file
+});
+$("#toggleLegend").addEventListener("click", () => {
+  state.legendInExport = !state.legendInExport;
+  render();
+});
+document.querySelectorAll(".export-tabs button").forEach(b => {
+  b.addEventListener("click", () => {
+    document.querySelectorAll(".export-tabs button").forEach(x => x.classList.remove("active"));
+    b.classList.add("active");
+    currentFmt = b.dataset.fmt;
+    renderExport();
+  });
+});
+document.querySelectorAll("#exportFormToggle button").forEach(b => {
+  b.addEventListener("click", () => {
+    document.querySelectorAll("#exportFormToggle button").forEach(x => x.classList.remove("active"));
+    b.classList.add("active");
+    currentForm = b.dataset.form;
+    renderExport();
+  });
+});
+$("#copyExport").addEventListener("click", () => {
+  const ta = $("#exportOut");
+  ta.select();
+  navigator.clipboard.writeText(ta.value).then(() => toast("Copied to clipboard"))
+    .catch(() => { document.execCommand("copy"); toast("Copied"); });
+});
+$("#downloadExport").addEventListener("click", () => {
+  const ext = currentFmt === "latex" ? "tex" : currentFmt === "csv" ? "csv" : "txt";
+  const blob = new Blob([$("#exportOut").value], { type: "text/plain" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = "contribution-matrix-" + currentForm + "." + ext;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast("Downloaded ." + ext);
+});
+
+let toastTimer;
+function toast(msg) {
+  const t = $("#toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove("show"), 1800);
+}
+
+/* ---- boot ---- */
+if (!load()) state = demoState();
+render();
+</script>
+
+
+</body></html>
